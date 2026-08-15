@@ -135,7 +135,37 @@ class KnurlWindow(Adw.ApplicationWindow):
                 group.add(build_list_item_row(item, self._on_field_changed))
             page.add(group)
 
+        if cat.add_spec is not None:
+            page.add(self._build_add_group(cat))
+
         self.content_scroller.set_child(outer)
+
+    def _build_add_group(self, cat) -> Adw.PreferencesGroup:
+        group = Adw.PreferencesGroup(title=f"Add a new {cat.name.rstrip('s').lower()}")
+        entries = [Adw.EntryRow(title=label) for label in cat.add_spec.fields]
+        for entry in entries:
+            group.add(entry)
+
+        def on_add(_button, cat=cat, entries=entries):
+            values = [e.get_text() for e in entries]
+            success, message = cat.add_spec.handler(*values)
+            self._toast(message)
+            if success:
+                for e in entries:
+                    e.set_text("")
+                self.dirty = True
+                self.save_button.set_sensitive(True)
+                self._refresh_category_data()
+                self._show_category(cat.name)
+
+        add_row = Adw.ActionRow(title="Add")
+        button = Gtk.Button(icon_name="list-add-symbolic", valign=Gtk.Align.CENTER)
+        button.add_css_class("suggested-action")
+        button.connect("clicked", on_add)
+        add_row.add_suffix(button)
+        add_row.set_activatable_widget(button)
+        group.add(add_row)
+        return group
 
     # -- edits ------------------------------------------------------------
 

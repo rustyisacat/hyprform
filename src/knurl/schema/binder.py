@@ -24,6 +24,7 @@ from typing import Callable
 from ..hyprlang.model import Block, KeyValue
 from ..lua.locators import ArrayItem, CallArg, Locator, ReturnTableField, TableField, make_setter
 from ..lua.values import ArrayValue, LiteralValue, OpaqueValue, TableValue
+from ..lua.writer import format_literal
 from .fields import FieldSpec
 
 BIND_KEYS = {"bind", "binde", "bindm", "bindr", "bindl", "bindn", "bindt", "bindi", "binds"}
@@ -57,10 +58,23 @@ class ListItem:
 
 
 @dataclass
+class AddSpec:
+    """Describes how to add a new entry to a list-shaped category.
+    ``fields`` names the plain-text inputs the GUI should collect (e.g.
+    ``["Command"]`` or ``["Name", "Value"]``); ``handler`` receives them in
+    that order and returns (success, message).
+    """
+
+    fields: list[str]
+    handler: Callable[..., tuple[bool, str]]
+
+
+@dataclass
 class Category:
     name: str
     scalar_fields: list[BoundField]
     list_items: list[ListItem]
+    add_spec: AddSpec | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -232,6 +246,46 @@ def list_environment(tree) -> list[ListItem]:
     return items
 
 
+def add_autostart(tree, command: str) -> tuple[bool, str]:
+    command = command.strip()
+    if not command:
+        return False, "Enter a command first."
+
+    if tree.hyprlang_docs:
+        doc = max(tree.hyprlang_docs.values(), key=lambda d: len(d.root.find_all("exec-once")))
+        doc.root.children.append(KeyValue(key="exec-once", value=command))
+        return True, f"Added to {doc.path}"
+
+    for module in tree.lua_modules.values():
+        calls = [c for c in module.call_sites if c.dotted_name == "hl.exec_cmd"]
+        if calls:
+            module.insert_after_call(calls[-1], f"hl.exec_cmd({format_literal('string', command)})")
+            return True, f"Added to {module.path}"
+
+    return False, "No existing autostart entry found to add alongside — Knurl only adds new Lua statements next to a real existing one, to stay in the same scope."
+
+
+def add_environment(tree, name: str, value: str) -> tuple[bool, str]:
+    name = name.strip()
+    value = value.strip()
+    if not name:
+        return False, "Enter a variable name first."
+
+    if tree.hyprlang_docs:
+        doc = max(tree.hyprlang_docs.values(), key=lambda d: len(d.root.find_all("env")))
+        doc.root.children.append(KeyValue(key="env", value=f"{name},{value}"))
+        return True, f"Added to {doc.path}"
+
+    for module in tree.lua_modules.values():
+        calls = [c for c in module.call_sites if c.dotted_name == "hl.env"]
+        if calls:
+            call_text = f"hl.env({format_literal('string', name)}, {format_literal('string', value)})"
+            module.insert_after_call(calls[-1], call_text)
+            return True, f"Added to {module.path}"
+
+    return False, "No existing environment entry found to add alongside — Knurl only adds new Lua statements next to a real existing one, to stay in the same scope."
+
+
 def list_monitors(tree) -> list[ListItem]:
     items: list[ListItem] = []
     for path, doc in tree.hyprlang_docs.items():
@@ -342,7 +396,21 @@ def build_categories(tree) -> list[Category]:
     categories = [Category(name, scalars.get(name, []), []) for name in ("Appearance", "Behavior", "Input")]
     categories.append(Category("Monitors", [], list_monitors(tree)))
     categories.append(Category("Keybinds", [], list_keybinds(tree)))
-    categories.append(Category("Autostart", [], list_autostart(tree)))
+    categories.append(
+        Category(
+            "Autostart",
+            [],
+            list_autostart(tree),
+            add_spec=AddSpec(["Command"], lambda cmd, tree=tree: add_autostart(tree, cmd)),
+        )
+    )
     categories.append(Category("Window Rules", [], list_window_rules(tree)))
-    categories.append(Category("Environment", [], list_environment(tree)))
+    categories.append(
+        Category(
+            "Environment",
+            [],
+            list_environment(tree),
+            add_spec=AddSpec(["Name", "Value"], lambda name, value, tree=tree: add_environment(tree, name, value)),
+        )
+    )
     return [c for c in categories if c.scalar_fields or c.list_items]

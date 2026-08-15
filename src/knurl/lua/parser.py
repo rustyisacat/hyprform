@@ -149,6 +149,24 @@ class LuaModule:
         subsequent spans stay valid for further edits in the same session.
         """
         self.source = self.source[: span.start] + new_text + self.source[span.stop + 1 :]
+        self._reparse()
+
+    def insert_after_call(self, call: CallSite, statement: str) -> None:
+        """Insert a brand-new statement right after an existing call, at
+        the same indentation. This is the only structurally safe way to add
+        new Lua code without understanding arbitrary scoping: a new
+        sibling statement next to a real existing one is guaranteed to run
+        in the same context (e.g. inside the same ``hl.on(...)`` handler),
+        which blindly appending at end-of-file is not.
+        """
+        line_start = self.source.rfind("\n", 0, call.span.start) + 1
+        indent = self.source[line_start : call.span.start]
+        indent = indent[: len(indent) - len(indent.lstrip())]
+        insertion = f"\n{indent}{statement}"
+        self.source = self.source[: call.span.stop + 1] + insertion + self.source[call.span.stop + 1 :]
+        self._reparse()
+
+    def _reparse(self) -> None:
         self.tree = last.parse(self.source)
         self.call_sites = find_call_sites(self.tree, self.source, self.RECOGNIZED_CALLS)
         self.return_table = find_return_table(self.tree, self.source)
