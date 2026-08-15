@@ -9,8 +9,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gtk  # noqa: E402
 
+from .. import color  # noqa: E402
 from ..schema.binder import BoundField, ListItem  # noqa: E402
 
 
@@ -42,6 +43,29 @@ def build_field_row(field: BoundField, on_changed) -> Adw.PreferencesRow:
             row.set_selected(0)
         row.connect("notify::selected", lambda r, _p: on_changed(field, field.choices[r.get_selected()]))
         return row
+
+    if field.kind == "color":
+        parsed = color.parse_color(str(field.value))
+        if parsed is not None:
+            row = Adw.ActionRow(title=field.label, subtitle=subtitle)
+            button = Gtk.ColorDialogButton(dialog=Gtk.ColorDialog())
+            button.set_valign(Gtk.Align.CENTER)
+            rgba = Gdk.RGBA()
+            rgba.red, rgba.green, rgba.blue, rgba.alpha = parsed.r, parsed.g, parsed.b, parsed.a
+            button.set_rgba(rgba)
+
+            def _on_color_changed(btn, _pspec, field=field, style=parsed.style):
+                c = btn.get_rgba()
+                new_value = color.format_color(c.red, c.green, c.blue, c.alpha, style)
+                on_changed(field, new_value)
+
+            button.connect("notify::rgba", _on_color_changed)
+            row.add_suffix(button)
+            row.set_activatable_widget(button)
+            return row
+        # Not a single flat color (e.g. a gradient with multiple stops) —
+        # fall through to the plain text field below rather than risk
+        # a picker that can only ever show/set one stop of it.
 
     if field.kind == "number":
         row = Adw.SpinRow.new_with_range(0, 100000, 1)

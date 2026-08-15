@@ -37,8 +37,8 @@ FIELDS: list[FieldSpec] = [
     FieldSpec("general", "resize_on_border", "Resize by dragging window edges", "Lets you resize a window by clicking and dragging near its edge, not just the border line.", "bool", "Appearance"),
     FieldSpec("general", "allow_tearing", "Allow screen tearing", "Lets fullscreen apps (mainly games) skip a sync step for lower input lag, at the cost of possible visual tearing.", "bool", "Appearance"),
     FieldSpec("general", "no_border_on_floating", "No border on floating windows", "Hides the colored border outline specifically on floating (non-tiled) windows.", "bool", "Appearance"),
-    FieldSpec("general", "col.active_border", "Focused window border color", "Color (or gradient) of the border around the currently focused window.", "string", "Appearance"),
-    FieldSpec("general", "col.inactive_border", "Unfocused window border color", "Color of the border around windows that aren't focused.", "string", "Appearance"),
+    FieldSpec("general", "col.active_border", "Focused window border color", "Color (or gradient) of the border around the currently focused window.", "color", "Appearance"),
+    FieldSpec("general", "col.inactive_border", "Unfocused window border color", "Color of the border around windows that aren't focused.", "color", "Appearance"),
     FieldSpec("general.snap", "enabled", "Snap windows to edges", "Lets floating windows snap into place near screen edges and other windows while dragging.", "bool", "Appearance"),
     FieldSpec("general.snap", "window_gap", "Snap distance", "How close a window's edge has to get to another before it snaps.", "number", "Appearance", unit="px"),
     # --- Appearance: decoration ---
@@ -58,7 +58,7 @@ FIELDS: list[FieldSpec] = [
     FieldSpec("decoration.shadow", "enabled", "Window drop shadow", "Draws a soft shadow behind each window.", "bool", "Appearance"),
     FieldSpec("decoration.shadow", "range", "Shadow size", "How far the drop shadow spreads out from the window.", "number", "Appearance", unit="px"),
     FieldSpec("decoration.shadow", "render_power", "Shadow softness", "How soft/feathered the shadow's edge looks, from 1 (sharp) to 4 (very soft).", "number", "Appearance"),
-    FieldSpec("decoration.shadow", "color", "Shadow color", "Color of the drop shadow, as a hex value (e.g. 0xee1a1a1a).", "string", "Appearance"),
+    FieldSpec("decoration.shadow", "color", "Shadow color", "Color of the drop shadow.", "color", "Appearance"),
     # --- Appearance: animations ---
     FieldSpec("animations", "enabled", "Enable animations", "Turns on smooth motion for opening/closing/moving windows and workspaces.", "bool", "Appearance"),
     FieldSpec("animations", "first_launch_animation", "Startup animation", "Plays an animation the very first time Hyprland's desktop appears after login.", "bool", "Appearance"),

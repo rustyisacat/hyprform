@@ -21,7 +21,9 @@ of either syntax.
 - **Appearance** — gaps, border thickness and color, snap-to-edge, rounding,
   opacity, dimming, full blur tuning (strength, passes, contrast,
   brightness, vibrancy, noise, xray), shadow (size, softness, color),
-  animations
+  animations. Border and shadow colors get a real color picker whenever the
+  value is a single flat color (gradients stay as plain text — a picker
+  can't represent multiple stops, so it doesn't pretend to)
 - **Behavior** — DPMS wake, splash/logo, VRR, focus-on-activate, manual
   resize/drag animation, terminal swallowing, fullscreen handling, XWayland,
   and dwindle/master layout tuning (pseudotile, split behavior, master
@@ -30,8 +32,43 @@ of either syntax.
   focus-follows-mouse, touchpad gestures and swipe tuning
 - **Cursor** — hardware cursor mode, auto-hide on idle/typing/touch,
   per-monitor default, zoom
-- **Monitors, Keybinds, Autostart, Window Rules, Environment** — the
-  repeatable-entry parts of your config, shown as lists
+- **Monitors** — each entry's name, resolution, position, and scale are
+  their own editable fields (not one raw line), with any trailing flags
+  (transform, mirror, bitdepth, ...) preserved untouched
+- **Keybinds, Autostart, Window Rules, Environment** — shown as lists, with
+  an "add new" form for every one of them (see below)
+- **Search** — a search bar in the sidebar filters every setting across
+  every category at once, by name and description, so you don't have to
+  know which category something lives in
+
+## Adding new entries
+
+Autostart, Environment, Window Rules, and Keybinds all have an "add a new
+one" form at the bottom of their category — no hyprlang/Lua syntax involved:
+
+- **Window Rules**: pick what to match (class/title/initialClass/
+  initialTitle) and a value, pick a rule (float, workspace, opacity, size,
+  ...) and its argument if it needs one. Hyprform builds the
+  `windowrulev2` line and the exact-match regex for you.
+- **Keybinds**: modifiers, key, an action from a curated list of common
+  dispatchers, an optional argument, and a "repeat while held" toggle
+  (`bind` vs `binde`).
+
+All of these work for hyprlang configs. For Lua configs, Autostart and
+Environment insert next to an existing sibling call at the same
+indentation (not blindly appended at end-of-file, since real configs often
+wrap calls in `hl.on("hyprland.start", function() ... end)`); Window Rules
+and Keybinds are hyprlang-only for now — Hyprform doesn't have confirmed
+knowledge of the exact argument shape `hl.window_rule()`/`hl.bind()` expect
+in every real config, and would rather say so than guess and silently
+write something wrong.
+
+## Reviewing changes before they're written
+
+Clicking Save shows a real unified diff of every file about to change —
+old lines and new lines, nothing hidden — before anything touches disk.
+Confirming still keeps the existing timestamped backup
+(`<file>.hyprform-bak-<timestamp>`) alongside each touched file.
 
 ## What it deliberately doesn't try to do
 
@@ -45,8 +82,7 @@ source — most Caelestia-style setups keep the actual tunable values in one
 `variables.lua`, so this is what makes editing those configs useful at all.
 
 Every edit is a surgical text replacement — untouched lines in your config
-never move or reformat. Every save writes a timestamped backup
-(`<file>.hyprform-bak-<timestamp>`) alongside the original before touching it.
+never move or reformat.
 
 ## Install
 
@@ -84,17 +120,13 @@ have all been tested against a real hybrid hyprlang+Lua Caelestia config
 (69 keybinds, 13 autostart entries, 14 env vars, 7 window rules all
 discovered and correctly classified editable/read-only) as well as a
 synthetic plain hyprlang `.conf`. Run `pytest` for the automated test suite
-(13 tests).
+(30 tests).
 
-Adding brand-new entries from the GUI is supported for **Autostart** and
-**Environment** in both config formats — for Lua configs, new entries are
-inserted next to an existing sibling call at the same indentation (not
-blindly appended at end-of-file, since real configs often wrap calls in
-`hl.on("hyprland.start", function() ... end)`). Not yet built: adding new
-Keybinds, Window Rules, or Monitors from the GUI — those don't have a safe
-universal single-anchor pattern the same way, so they're left read-only
-rather than guessed at. A "reload Hyprland" confirmation beyond the
-best-effort `hyprctl reload` on save is also still basic.
+Not yet built: adding brand-new Monitors from the GUI (editing an existing
+one is fully supported; adding one safely needs to know which monitor
+ports actually exist, which Hyprform doesn't probe for). A "reload
+Hyprland" confirmation beyond the best-effort `hyprctl reload` on save is
+also still basic.
 
 ## Source
 

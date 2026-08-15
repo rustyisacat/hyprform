@@ -7,6 +7,7 @@ small as the edits that were actually made in the GUI.
 from __future__ import annotations
 
 import datetime
+import difflib
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -32,6 +33,24 @@ def pending_changes(tree) -> dict[str, str]:
         if module.source != tree.original_text.get(path):
             changed[path] = module.source
     return changed
+
+
+def unified_diffs(tree) -> dict[str, str]:
+    """path -> unified diff text, for every file with pending changes — so
+    the GUI can show exactly what's about to be written before Save
+    actually touches disk.
+    """
+    diffs = {}
+    for path, new_text in pending_changes(tree).items():
+        old_text = tree.original_text.get(path, "")
+        diff = difflib.unified_diff(
+            old_text.splitlines(keepends=True),
+            new_text.splitlines(keepends=True),
+            fromfile=f"{path} (before)",
+            tofile=f"{path} (after)",
+        )
+        diffs[path] = "".join(diff)
+    return diffs
 
 
 def save(tree, reload_hyprland: bool = False) -> list[SavedFile]:

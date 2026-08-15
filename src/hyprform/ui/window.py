@@ -50,6 +50,14 @@ class HyprformWindow(Adw.ApplicationWindow):
         header.set_title_widget(Adw.WindowTitle(title="Hyprform", subtitle=self.hypr_dir))
         toolbar.add_top_bar(header)
 
+        self.search_entry = Gtk.SearchEntry(placeholder_text="Search all settings…")
+        self.search_entry.set_margin_start(8)
+        self.search_entry.set_margin_end(8)
+        self.search_entry.set_margin_top(8)
+        self.search_entry.set_margin_bottom(4)
+        self.search_entry.connect("search-changed", self._on_search_changed)
+        toolbar.add_top_bar(self.search_entry)
+
         self.sidebar_list = Gtk.ListBox()
         self.sidebar_list.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.sidebar_list.add_css_class("navigation-sidebar")
@@ -141,19 +149,85 @@ class HyprformWindow(Adw.ApplicationWindow):
 
         self.content_scroller.set_child(outer)
 
+    def _on_search_changed(self, entry):
+        query = entry.get_text().strip()
+        if not query:
+            if self._current_category_name:
+                self._show_category(self._current_category_name)
+            return
+        self._show_search_results(query)
+
+    def _show_search_results(self, query: str):
+        q = query.lower()
+        by_category: dict[str, list[tuple[str, object]]] = {}
+        for cat in self.categories:
+            for field in cat.scalar_fields:
+                haystack = f"{field.label} {field.description}".lower()
+                if q in haystack:
+                    by_category.setdefault(cat.name, []).append(("field", field))
+            for item in cat.list_items:
+                if q in item.summary.lower():
+                    by_category.setdefault(cat.name, []).append(("item", item))
+
+        self.content_page.set_title(f"Search: {query}")
+
+        if not by_category:
+            status = Adw.StatusPage(
+                title="No matches",
+                description=f"Nothing found for “{query}”.",
+                icon_name="edit-find-symbolic",
+            )
+            self.content_scroller.set_child(status)
+            return
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        page = Adw.PreferencesPage()
+        outer.append(page)
+
+        for cat_name, entries in by_category.items():
+            group = Adw.PreferencesGroup(title=cat_name)
+            for kind, obj in entries:
+                if kind == "field":
+                    group.add(build_field_row(obj, self._on_field_changed))
+                else:
+                    group.add(build_list_item_row(obj, self._on_field_changed))
+            page.add(group)
+
+        self.content_scroller.set_child(outer)
+
     def _build_add_group(self, cat) -> Adw.PreferencesGroup:
         group = Adw.PreferencesGroup(title=f"Add a new {cat.name.rstrip('s').lower()}")
-        entries = [Adw.EntryRow(title=label) for label in cat.add_spec.fields]
-        for entry in entries:
-            group.add(entry)
+        widgets = []
+        for spec in cat.add_spec.fields:
+            if spec.kind == "choice":
+                row = Adw.ComboRow(title=spec.label)
+                row.set_model(Gtk.StringList.new(list(spec.choices)))
+            elif spec.kind == "bool":
+                row = Adw.SwitchRow(title=spec.label)
+            else:
+                row = Adw.EntryRow(title=spec.label)
+            widgets.append((spec, row))
+            group.add(row)
 
-        def on_add(_button, cat=cat, entries=entries):
-            values = [e.get_text() for e in entries]
+        def on_add(_button, cat=cat, widgets=widgets):
+            values = []
+            for spec, row in widgets:
+                if spec.kind == "choice":
+                    values.append(spec.choices[row.get_selected()])
+                elif spec.kind == "bool":
+                    values.append(row.get_active())
+                else:
+                    values.append(row.get_text())
             success, message = cat.add_spec.handler(*values)
             self._toast(message)
             if success:
-                for e in entries:
-                    e.set_text("")
+                for spec, row in widgets:
+                    if spec.kind == "choice":
+                        row.set_selected(0)
+                    elif spec.kind == "bool":
+                        row.set_active(False)
+                    else:
+                        row.set_text("")
                 self.dirty = True
                 self.save_button.set_sensitive(True)
                 self._refresh_category_data()
@@ -183,6 +257,44 @@ class HyprformWindow(Adw.ApplicationWindow):
         self._refresh_category_data()
 
     def _on_save_clicked(self, _button):
+        diffs = save_mod.unified_diffs(self.tree)
+        if not diffs:
+            self._toast("Nothing to save")
+            return
+        self._show_diff_dialog(diffs)
+
+    def _show_diff_dialog(self, diffs: dict[str, str]):
+        dialog = Adw.Dialog()
+        dialog.set_title("Review changes")
+        dialog.set_content_width(720)
+        dialog.set_content_height(560)
+
+        toolbar = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        header.set_show_end_title_buttons(False)
+        header.set_show_start_title_buttons(False)
+
+        cancel_button = Gtk.Button(label="Cancel")
+        cancel_button.connect("clicked", lambda _b, d=dialog: d.close())
+        header.pack_start(cancel_button)
+
+        save_button = Gtk.Button(label=f"Save {len(diffs)} file{'s' if len(diffs) != 1 else ''}")
+        save_button.add_css_class("suggested-action")
+        save_button.connect("clicked", lambda _b, d=dialog: self._confirm_save(d))
+        header.pack_end(save_button)
+        toolbar.add_top_bar(header)
+
+        text_view = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.NONE, top_margin=8, bottom_margin=8, left_margin=8, right_margin=8)
+        combined = "\n".join(diffs.values())
+        text_view.get_buffer().set_text(combined)
+        scroller = Gtk.ScrolledWindow(child=text_view, vexpand=True, hexpand=True)
+        toolbar.set_content(scroller)
+
+        dialog.set_child(toolbar)
+        dialog.present(self)
+
+    def _confirm_save(self, dialog):
+        dialog.close()
         try:
             saved = save_mod.save(self.tree, reload_hyprland=self._is_hyprland_running())
         except Exception as e:  # noqa: BLE001

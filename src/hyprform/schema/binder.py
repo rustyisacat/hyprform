@@ -58,14 +58,26 @@ class ListItem:
 
 
 @dataclass
-class AddSpec:
-    """Describes how to add a new entry to a list-shaped category.
-    ``fields`` names the plain-text inputs the GUI should collect (e.g.
-    ``["Command"]`` or ``["Name", "Value"]``); ``handler`` receives them in
-    that order and returns (success, message).
+class AddField:
+    """One input in an "add a new entry" form. ``string`` renders as a text
+    entry, ``choice`` as a dropdown (``choices`` are passed to the handler
+    verbatim, in order), ``bool`` as a switch.
     """
 
-    fields: list[str]
+    label: str
+    kind: str = "string"  # "string" | "choice" | "bool"
+    choices: tuple[str, ...] = ()
+
+
+@dataclass
+class AddSpec:
+    """Describes how to add a new entry to a list-shaped category.
+    ``fields`` describes the inputs the GUI should collect; ``handler``
+    receives their values positionally, in order, and returns (success,
+    message).
+    """
+
+    fields: list[AddField]
     handler: Callable[..., tuple[bool, str]]
 
 
@@ -286,11 +298,44 @@ def add_environment(tree, name: str, value: str) -> tuple[bool, str]:
     return False, "No existing environment entry found to add alongside — Hyprform only adds new Lua statements next to a real existing one, to stay in the same scope."
 
 
+_MONITOR_FIELDS = (
+    ("Name", "Which monitor this applies to (its port name, e.g. 'DP-1'), or blank to match any monitor."),
+    ("Resolution", "Resolution and refresh rate, e.g. '1920x1080@144', or 'preferred' for the monitor's own default."),
+    ("Position", "Where this monitor sits relative to others, e.g. '0x0', or 'auto' to let Hyprland decide."),
+    ("Scale", "Display scaling factor, e.g. '1' or '1.5', or 'auto'."),
+)
+
+
+def _monitor_hyprlang_item(kv: KeyValue, path: str) -> ListItem:
+    """hyprlang ``monitor = NAME,RESOLUTION,POSITION,SCALE[,...]`` is just a
+    raw comma-separated string. Splitting the first four fields into their
+    own editable rows (and leaving anything past them — transform, mirror,
+    bitdepth, vrr, etc. — untouched in place) makes this genuinely editable
+    instead of a single opaque line, without needing to understand every
+    possible trailing flag.
+    """
+    fields = []
+    for index, (label, description) in enumerate(_MONITOR_FIELDS):
+        parts = kv.value.split(",")
+        value = parts[index].strip() if index < len(parts) else ""
+
+        def setter(new_value, kv=kv, index=index):
+            parts = kv.value.split(",")
+            while len(parts) <= index:
+                parts.append("")
+            parts[index] = str(new_value).strip()
+            kv.touch(",".join(p.strip() for p in parts))
+
+        fields.append(BoundField(label, description, "string", value, path, True, (), "", setter))
+    summary = kv.value.strip() or "(monitor)"
+    return ListItem(summary=summary, fields=fields, source_file=path, editable=True)
+
+
 def list_monitors(tree) -> list[ListItem]:
     items: list[ListItem] = []
     for path, doc in tree.hyprlang_docs.items():
         for kv in doc.root.find_all("monitor"):
-            items.append(ListItem(summary=kv.value, fields=[], source_file=path, editable=False, raw=kv.value))
+            items.append(_monitor_hyprlang_item(kv, path))
     for path, module in tree.lua_modules.items():
         calls = [c for c in module.call_sites if c.dotted_name == "hl.monitor"]
         for i, call in enumerate(calls):
@@ -328,6 +373,37 @@ def list_window_rules(tree) -> list[ListItem]:
     return items
 
 
+WINDOW_RULE_MATCH_CHOICES = ("class", "title", "initialClass", "initialTitle")
+WINDOW_RULE_TYPE_CHOICES = (
+    "float", "tile", "fullscreen", "maximize", "pin", "center",
+    "noblur", "noanim", "noshadow", "opaque",
+    "workspace", "opacity", "size", "move",
+)
+
+
+def add_window_rule(tree, match_by: str, match_value: str, rule_type: str, rule_value: str) -> tuple[bool, str]:
+    match_value = match_value.strip()
+    if not match_value:
+        return False, "Enter what to match (e.g. an app's class name) first."
+    rule_value = rule_value.strip()
+    rule = f"{rule_type} {rule_value}".strip() if rule_value else rule_type
+    line = f"{rule},{match_by}:^({match_value})$"
+
+    if tree.hyprlang_docs:
+        doc = max(tree.hyprlang_docs.values(), key=lambda d: len(d.root.find_all("windowrulev2")))
+        doc.root.children.append(KeyValue(key="windowrulev2", value=line))
+        return True, f"Added to {doc.path}"
+
+    if tree.lua_modules:
+        return False, (
+            "Hyprform doesn't know the exact table shape your Lua config's hl.window_rule() calls "
+            "expect, so it won't guess at writing a new one — add this rule directly in your Lua "
+            "files, or switch to a hyprlang windowrulev2 line."
+        )
+
+    return False, "No config file found to add a window rule to."
+
+
 _CAMEL_RE = re.compile(r"(?<!^)(?=[A-Z])")
 
 
@@ -358,6 +434,38 @@ def list_keybinds(tree) -> list[ListItem]:
                 ]
                 items.append(ListItem(summary=f"{label} ({len(value.items)} shortcuts)", fields=fields, source_file=path, editable=True))
     return items
+
+
+KEYBIND_ACTION_CHOICES = (
+    "exec", "killactive", "togglefloating", "fullscreen", "exit",
+    "workspace", "movetoworkspace", "movefocus", "resizeactive",
+    "pin", "pseudo", "togglegroup",
+)
+
+
+def add_keybind(tree, mods: str, key: str, action: str, argument: str, repeat: bool) -> tuple[bool, str]:
+    key = key.strip()
+    if not key:
+        return False, "Enter a key first (e.g. 'Q', 'Return', 'mouse:272')."
+    mods = mods.strip()
+    argument = argument.strip()
+    value = f"{mods}, {key}, {action}, {argument}"
+    bind_key = "binde" if repeat else "bind"
+
+    if tree.hyprlang_docs:
+        doc = max(tree.hyprlang_docs.values(), key=lambda d: sum(len(d.root.find_all(k)) for k in BIND_KEYS))
+        doc.root.children.append(KeyValue(key=bind_key, value=value))
+        return True, f"Added to {doc.path}"
+
+    if tree.lua_modules:
+        return False, (
+            "Hyprform doesn't know the exact argument order your Lua config's hl.bind() calls expect "
+            "(and many real Lua configs bind keys indirectly through a helper function anyway), so it "
+            "won't guess at writing a new one — add this keybind directly in your Lua files, or switch "
+            "to a hyprlang bind= line."
+        )
+
+    return False, "No config file found to add a keybind to."
 
 
 # ---------------------------------------------------------------------------
@@ -397,22 +505,55 @@ def build_categories(tree) -> list[Category]:
     scalars = build_scalar_categories(tree)
     categories = [Category(name, scalars.get(name, []), []) for name in CATEGORIES]
     categories.append(Category("Monitors", [], list_monitors(tree)))
-    categories.append(Category("Keybinds", [], list_keybinds(tree)))
+    categories.append(
+        Category(
+            "Keybinds",
+            [],
+            list_keybinds(tree),
+            add_spec=AddSpec(
+                [
+                    AddField("Modifiers (e.g. SUPER, SUPER SHIFT — leave blank for none)"),
+                    AddField("Key (e.g. Q, Return, mouse:272)"),
+                    AddField("Action", kind="choice", choices=KEYBIND_ACTION_CHOICES),
+                    AddField("Argument (if needed, e.g. a command or workspace number)"),
+                    AddField("Repeat while held down", kind="bool"),
+                ],
+                lambda mods, key, action, argument, repeat, tree=tree: add_keybind(tree, mods, key, action, argument, repeat),
+            ),
+        )
+    )
     categories.append(
         Category(
             "Autostart",
             [],
             list_autostart(tree),
-            add_spec=AddSpec(["Command"], lambda cmd, tree=tree: add_autostart(tree, cmd)),
+            add_spec=AddSpec([AddField("Command")], lambda cmd, tree=tree: add_autostart(tree, cmd)),
         )
     )
-    categories.append(Category("Window Rules", [], list_window_rules(tree)))
+    categories.append(
+        Category(
+            "Window Rules",
+            [],
+            list_window_rules(tree),
+            add_spec=AddSpec(
+                [
+                    AddField("Match by", kind="choice", choices=WINDOW_RULE_MATCH_CHOICES),
+                    AddField("Match value (e.g. an app's class name)"),
+                    AddField("Rule", kind="choice", choices=WINDOW_RULE_TYPE_CHOICES),
+                    AddField("Rule value (if needed, e.g. a workspace number)"),
+                ],
+                lambda match_by, match_value, rule_type, rule_value, tree=tree: add_window_rule(
+                    tree, match_by, match_value, rule_type, rule_value
+                ),
+            ),
+        )
+    )
     categories.append(
         Category(
             "Environment",
             [],
             list_environment(tree),
-            add_spec=AddSpec(["Name", "Value"], lambda name, value, tree=tree: add_environment(tree, name, value)),
+            add_spec=AddSpec([AddField("Name"), AddField("Value")], lambda name, value, tree=tree: add_environment(tree, name, value)),
         )
     )
     return [c for c in categories if c.scalar_fields or c.list_items]
