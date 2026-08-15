@@ -40,6 +40,14 @@ uv tool install --editable .
 knurl
 ```
 
+To make it show up in your app launcher (wofi/rofi/fuzzel, GNOME/KDE menus,
+anything that reads the freedesktop `.desktop` spec):
+
+```
+mkdir -p ~/.local/share/applications
+cp data/dev.rustyisacat.Knurl.desktop ~/.local/share/applications/
+```
+
 Or point it at a specific config directory (useful for testing against a
 copy before trusting it with your real one):
 

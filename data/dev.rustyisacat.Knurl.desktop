@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Knurl
+GenericName=Hyprland Config Editor
+Comment=Edit your Hyprland config — no nano, no lingo
+Exec=knurl
+Icon=preferences-system
+Terminal=false
+Categories=Settings;GTK;
+Keywords=hyprland;config;wayland;compositor;settings;
+StartupWMClass=dev.rustyisacat.Knurl
+StartupNotify=true
