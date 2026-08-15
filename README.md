@@ -1,5 +1,11 @@
 # Hyprform
 
+![Platform](https://img.shields.io/badge/platform-Hyprland-58E1FF?logo=linux&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
+![GTK4](https://img.shields.io/badge/UI-GTK4%20%2B%20libadwaita-4A86CF?logo=gtk&logoColor=white)
+![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
+
 A GUI for editing Hyprland's config. No nano, no learning hyprlang or Lua syntax.
 
 Hyprland configs come in two shapes these days: the classic `hyprland.conf`
@@ -68,13 +74,22 @@ Early but functional — the parsers, the Lua-editing engine, and the GUI
 have all been tested against a real hybrid hyprlang+Lua Caelestia config
 (69 keybinds, 13 autostart entries, 14 env vars, 7 window rules all
 discovered and correctly classified editable/read-only) as well as a
-synthetic plain hyprlang `.conf`. Run `pytest` for the automated test suite.
+synthetic plain hyprlang `.conf`. Run `pytest` for the automated test suite
+(13 tests).
 
-Not yet built: adding brand-new entries (keybinds, autostart commands,
-window rules, env vars, monitors) from the GUI — today Hyprform edits every
-value it discovers in your existing config, but doesn't yet offer an "add
-new" flow for any category. A "reload Hyprland" confirmation beyond the
+Adding brand-new entries from the GUI is supported for **Autostart** and
+**Environment** in both config formats — for Lua configs, new entries are
+inserted next to an existing sibling call at the same indentation (not
+blindly appended at end-of-file, since real configs often wrap calls in
+`hl.on("hyprland.start", function() ... end)`). Not yet built: adding new
+Keybinds, Window Rules, or Monitors from the GUI — those don't have a safe
+universal single-anchor pattern the same way, so they're left read-only
+rather than guessed at. A "reload Hyprland" confirmation beyond the
 best-effort `hyprctl reload` on save is also still basic.
+
+## Source
+
+https://github.com/rustyisacat/hyprform
 
 ## License
 
