@@ -4,11 +4,59 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gtk  # noqa: E402
 
-from .. import discovery, save as save_mod  # noqa: E402
+from .. import discovery, hyprctl, save as save_mod  # noqa: E402
 from ..schema.binder import build_categories  # noqa: E402
 from .rows import build_field_row, build_list_item_row  # noqa: E402
+
+_MODIFIER_KEYVALS = {
+    Gdk.KEY_Shift_L, Gdk.KEY_Shift_R,
+    Gdk.KEY_Control_L, Gdk.KEY_Control_R,
+    Gdk.KEY_Alt_L, Gdk.KEY_Alt_R,
+    Gdk.KEY_Super_L, Gdk.KEY_Super_R,
+    Gdk.KEY_Meta_L, Gdk.KEY_Meta_R,
+    Gdk.KEY_Hyper_L, Gdk.KEY_Hyper_R,
+    Gdk.KEY_Caps_Lock, Gdk.KEY_ISO_Level3_Shift,
+}
+
+
+def translate_keypress(keyval: int, state) -> tuple[str, str] | None:
+    """Turns a captured GTK keypress into (modifiers, key) in Hyprland's own
+    naming convention (e.g. ("SUPER SHIFT", "Q")), so the Keybinds "add new"
+    form can be filled from an actual keypress instead of requiring the user
+    to already know X11 keysym names. Returns None for a bare modifier
+    keypress (Shift/Ctrl/etc. alone) — those should keep listening rather
+    than being captured as "the key".
+    """
+    if keyval in _MODIFIER_KEYVALS:
+        return None
+    mods = []
+    if state & Gdk.ModifierType.SUPER_MASK:
+        mods.append("SUPER")
+    if state & Gdk.ModifierType.CONTROL_MASK:
+        mods.append("CTRL")
+    if state & Gdk.ModifierType.ALT_MASK:
+        mods.append("ALT")
+    if state & Gdk.ModifierType.SHIFT_MASK:
+        mods.append("SHIFT")
+    name = Gdk.keyval_name(keyval) or ""
+    if len(name) == 1:
+        name = name.upper()
+    return " ".join(mods), name
+
+
+def monitor_picker_rows(monitors: list[dict]) -> list[tuple[str, str, str]]:
+    """(primary, secondary, value) rows for a hyprctl monitors -j result."""
+    return [
+        (m.get("name", "?"), f"{m.get('width', '?')}x{m.get('height', '?')} @ {m.get('refreshRate', '?')}Hz", m.get("name", ""))
+        for m in monitors
+    ]
+
+
+def client_picker_rows(clients: list[dict]) -> list[tuple[str, str, str]]:
+    """(primary, secondary, value) rows for a hyprctl clients -j result."""
+    return [(c.get("title") or "(untitled)", c.get("class", "?"), c.get("class", "")) for c in clients]
 
 CATEGORY_ICONS = {
     "Appearance": "applications-graphics-symbolic",
@@ -209,6 +257,8 @@ class HyprformWindow(Adw.ApplicationWindow):
             widgets.append((spec, row))
             group.add(row)
 
+        self._add_live_lookup_row(cat, group, widgets)
+
         def on_add(_button, cat=cat, widgets=widgets):
             values = []
             for spec, row in widgets:
@@ -241,6 +291,138 @@ class HyprformWindow(Adw.ApplicationWindow):
         add_row.set_activatable_widget(button)
         group.add(add_row)
         return group
+
+    def _add_live_lookup_row(self, cat, group, widgets):
+        """A few "add new" forms are much friendlier with a live-Hyprland
+        assist — picking a connected monitor, a running window's class, or
+        an actual keypress — instead of requiring the user to already know
+        Hyprland's own inspection commands. All of these degrade to a toast
+        explaining why, rather than silently doing nothing, if Hyprland
+        isn't reachable.
+        """
+        if cat.name == "Monitors":
+            name_row = next(row for spec, row in widgets if spec.label.startswith("Name"))
+            row = Adw.ActionRow(title="Detect connected monitors", subtitle="Requires Hyprland to be running")
+            button = Gtk.Button(icon_name="view-refresh-symbolic", valign=Gtk.Align.CENTER)
+
+            def on_detect(_button, name_row=name_row):
+                monitors = hyprctl.list_monitors()
+                if not monitors:
+                    self._toast("Couldn't detect monitors — is Hyprland running?")
+                    return
+                self._show_picker_dialog("Pick a monitor", monitor_picker_rows(monitors), name_row.set_text)
+
+            button.connect("clicked", on_detect)
+            row.add_suffix(button)
+            row.set_activatable_widget(button)
+            group.add(row)
+
+        elif cat.name == "Keybinds":
+            mods_row = next(row for spec, row in widgets if spec.label.startswith("Modifiers"))
+            key_row = next(row for spec, row in widgets if spec.label.startswith("Key"))
+            row = Adw.ActionRow(title="Or press the actual key combo", subtitle="Fills in Modifiers and Key for you")
+            button = Gtk.Button(label="Listen for keypress", valign=Gtk.Align.CENTER)
+            button.connect("clicked", lambda _b, mods_row=mods_row, key_row=key_row: self._show_key_capture_dialog(mods_row, key_row))
+            row.add_suffix(button)
+            row.set_activatable_widget(button)
+            group.add(row)
+
+        elif cat.name == "Window Rules":
+            match_by_row = next(row for spec, row in widgets if spec.label == "Match by")
+            match_value_row = next(row for spec, row in widgets if spec.label.startswith("Match value"))
+            row = Adw.ActionRow(title="Or pick a running window", subtitle="Requires Hyprland to be running")
+            button = Gtk.Button(label="Pick a window…", valign=Gtk.Align.CENTER)
+
+            def on_pick(_button, match_by_row=match_by_row, match_value_row=match_value_row):
+                clients = hyprctl.list_clients()
+                if not clients:
+                    self._toast("Couldn't list windows — is Hyprland running?")
+                    return
+
+                def apply_pick(value, match_by_row=match_by_row, match_value_row=match_value_row):
+                    match_by_row.set_selected(0)  # "class" — first in WINDOW_RULE_MATCH_CHOICES
+                    match_value_row.set_text(value)
+
+                self._show_picker_dialog("Pick a running window", client_picker_rows(clients), apply_pick)
+
+            button.connect("clicked", on_pick)
+            row.add_suffix(button)
+            row.set_activatable_widget(button)
+            group.add(row)
+
+    def _show_picker_dialog(self, title: str, rows_data: list[tuple[str, str, str]], on_pick):
+        dialog = Adw.Dialog()
+        dialog.set_title(title)
+        dialog.set_content_width(480)
+        dialog.set_content_height(420)
+
+        toolbar = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        cancel_button = Gtk.Button(label="Cancel")
+        cancel_button.connect("clicked", lambda _b, d=dialog: d.close())
+        header.pack_start(cancel_button)
+        toolbar.add_top_bar(header)
+
+        listbox = Gtk.ListBox()
+        listbox.add_css_class("boxed-list")
+        listbox.set_margin_start(12)
+        listbox.set_margin_end(12)
+        listbox.set_margin_top(12)
+        listbox.set_margin_bottom(12)
+        listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+
+        for primary, secondary, value in rows_data:
+            row = Adw.ActionRow(title=primary or "?", subtitle=secondary, activatable=True)
+            row.hyprform_value = value  # type: ignore[attr-defined]
+            listbox.append(row)
+
+        def on_row_activated(_list, row, dialog=dialog, on_pick=on_pick):
+            on_pick(row.hyprform_value)
+            dialog.close()
+
+        listbox.connect("row-activated", on_row_activated)
+        scroller = Gtk.ScrolledWindow(child=listbox, vexpand=True)
+        toolbar.set_content(scroller)
+
+        dialog.set_child(toolbar)
+        dialog.present(self)
+
+    def _show_key_capture_dialog(self, mods_row, key_row):
+        dialog = Adw.Dialog()
+        dialog.set_title("Press a key combo")
+        dialog.set_content_width(380)
+        dialog.set_content_height(180)
+
+        toolbar = Adw.ToolbarView()
+        header = Adw.HeaderBar()
+        cancel_button = Gtk.Button(label="Cancel")
+        cancel_button.connect("clicked", lambda _b, d=dialog: d.close())
+        header.pack_start(cancel_button)
+        toolbar.add_top_bar(header)
+
+        status = Adw.StatusPage(
+            title="Press your key combo now…",
+            description="Modifier keys alone won't be captured — press the actual key too.",
+            icon_name="input-keyboard-symbolic",
+        )
+        toolbar.set_content(status)
+
+        def on_key_pressed(_controller, keyval, _keycode, state, dialog=dialog, mods_row=mods_row, key_row=key_row):
+            translated = translate_keypress(keyval, state)
+            if translated is None:
+                return False
+            mods, key = translated
+            mods_row.set_text(mods)
+            key_row.set_text(key)
+            dialog.close()
+            return True
+
+        controller = Gtk.EventControllerKey()
+        controller.connect("key-pressed", on_key_pressed)
+        dialog.add_controller(controller)
+
+        dialog.set_child(toolbar)
+        dialog.present(self)
 
     # -- edits ------------------------------------------------------------
 
@@ -296,7 +478,7 @@ class HyprformWindow(Adw.ApplicationWindow):
     def _confirm_save(self, dialog):
         dialog.close()
         try:
-            saved = save_mod.save(self.tree, reload_hyprland=self._is_hyprland_running())
+            saved, reload_message = save_mod.save(self.tree, reload_hyprland=hyprctl.is_available())
         except Exception as e:  # noqa: BLE001
             self._toast(f"Save failed: {e}")
             return
@@ -306,13 +488,10 @@ class HyprformWindow(Adw.ApplicationWindow):
             self._toast("Nothing to save")
             return
         names = ", ".join(s.path.rsplit("/", 1)[-1] for s in saved)
-        self._toast(f"Saved {len(saved)} file(s): {names} (backups kept alongside each)")
-
-    @staticmethod
-    def _is_hyprland_running() -> bool:
-        import os
-
-        return bool(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE"))
+        message = f"Saved {len(saved)} file(s): {names} (backups kept alongside each)"
+        if reload_message:
+            message += f" — {reload_message}"
+        self._toast(message)
 
     # -- misc ---------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 from hyprform import discovery
 from hyprform.hyprlang.writer import serialize as serialize_hyprlang
-from hyprform.schema.binder import add_keybind, add_window_rule, list_monitors
+from hyprform.schema.binder import add_keybind, add_monitor, add_window_rule, list_monitors
 
 
 def test_monitor_line_splits_into_editable_fields(tmp_path):
@@ -120,5 +120,41 @@ def test_add_keybind_lua_fails_honestly_instead_of_guessing(tmp_path):
     tree = discovery.load(hypr_dir=str(tmp_path))
 
     ok, msg = add_keybind(tree, "SUPER", "Q", "exec", "kitty", False)
+    assert not ok
+    assert "doesn't know" in msg.lower() or "won't guess" in msg.lower()
+
+
+def test_add_monitor_hyprlang(tmp_path):
+    conf = tmp_path / "hyprland.conf"
+    conf.write_text("monitor=DP-1,1920x1080@144,0x0,1\n")
+    tree = discovery.load(hypr_dir=str(tmp_path))
+
+    ok, msg = add_monitor(tree, "HDMI-A-1", "1920x1080@60", "2560x0", "1")
+    assert ok, msg
+
+    doc = tree.hyprlang_docs[str(conf)]
+    text = serialize_hyprlang(doc)
+    assert text.splitlines()[-1] == "monitor = HDMI-A-1,1920x1080@60,2560x0,1"
+
+
+def test_add_monitor_defaults_blank_fields(tmp_path):
+    conf = tmp_path / "hyprland.conf"
+    conf.write_text("monitor=DP-1,1920x1080@144,0x0,1\n")
+    tree = discovery.load(hypr_dir=str(tmp_path))
+
+    ok, msg = add_monitor(tree, "HDMI-A-1", "", "", "")
+    assert ok, msg
+
+    doc = tree.hyprlang_docs[str(conf)]
+    text = serialize_hyprlang(doc)
+    assert text.splitlines()[-1] == "monitor = HDMI-A-1,preferred,auto,1"
+
+
+def test_add_monitor_lua_fails_honestly_instead_of_guessing(tmp_path):
+    lua = tmp_path / "hyprland.lua"
+    lua.write_text('hl.monitor({ name = "DP-1", width = 2560 })\n')
+    tree = discovery.load(hypr_dir=str(tmp_path))
+
+    ok, msg = add_monitor(tree, "HDMI-A-1", "1920x1080", "0x0", "1")
     assert not ok
     assert "doesn't know" in msg.lower() or "won't guess" in msg.lower()

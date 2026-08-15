@@ -354,6 +354,27 @@ def list_monitors(tree) -> list[ListItem]:
     return items
 
 
+def add_monitor(tree, name: str, resolution: str, position: str, scale: str) -> tuple[bool, str]:
+    resolution = resolution.strip() or "preferred"
+    position = position.strip() or "auto"
+    scale = scale.strip() or "1"
+    line = f"{name.strip()},{resolution},{position},{scale}"
+
+    if tree.hyprlang_docs:
+        doc = max(tree.hyprlang_docs.values(), key=lambda d: len(d.root.find_all("monitor")))
+        doc.root.children.append(KeyValue(key="monitor", value=line))
+        return True, f"Added to {doc.path}"
+
+    if tree.lua_modules:
+        return False, (
+            "Hyprform doesn't know the exact table shape your Lua config's hl.monitor() calls expect, "
+            "so it won't guess at writing a new one — add this monitor directly in your Lua files, or "
+            "switch to a hyprlang monitor= line."
+        )
+
+    return False, "No config file found to add a monitor to."
+
+
 def list_window_rules(tree) -> list[ListItem]:
     items: list[ListItem] = []
     for path, doc in tree.hyprlang_docs.items():
@@ -504,7 +525,22 @@ def build_categories(tree) -> list[Category]:
 
     scalars = build_scalar_categories(tree)
     categories = [Category(name, scalars.get(name, []), []) for name in CATEGORIES]
-    categories.append(Category("Monitors", [], list_monitors(tree)))
+    categories.append(
+        Category(
+            "Monitors",
+            [],
+            list_monitors(tree),
+            add_spec=AddSpec(
+                [
+                    AddField("Name (its port, e.g. 'DP-1' — leave blank to match any monitor)"),
+                    AddField("Resolution (e.g. '1920x1080@144', or 'preferred')"),
+                    AddField("Position (e.g. '0x0', or 'auto')"),
+                    AddField("Scale (e.g. '1', '1.5', or 'auto')"),
+                ],
+                lambda name, resolution, position, scale, tree=tree: add_monitor(tree, name, resolution, position, scale),
+            ),
+        )
+    )
     categories.append(
         Category(
             "Keybinds",

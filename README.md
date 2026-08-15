@@ -43,8 +43,9 @@ of either syntax.
 
 ## Adding new entries
 
-Autostart, Environment, Window Rules, and Keybinds all have an "add a new
-one" form at the bottom of their category — no hyprlang/Lua syntax involved:
+Autostart, Environment, Window Rules, Keybinds, and Monitors all have an
+"add a new one" form at the bottom of their category — no hyprlang/Lua
+syntax involved:
 
 - **Window Rules**: pick what to match (class/title/initialClass/
   initialTitle) and a value, pick a rule (float, workspace, opacity, size,
@@ -53,15 +54,37 @@ one" form at the bottom of their category — no hyprlang/Lua syntax involved:
 - **Keybinds**: modifiers, key, an action from a curated list of common
   dispatchers, an optional argument, and a "repeat while held" toggle
   (`bind` vs `binde`).
+- **Monitors**: name, resolution, position, scale.
 
 All of these work for hyprlang configs. For Lua configs, Autostart and
 Environment insert next to an existing sibling call at the same
 indentation (not blindly appended at end-of-file, since real configs often
-wrap calls in `hl.on("hyprland.start", function() ... end)`); Window Rules
-and Keybinds are hyprlang-only for now — Hyprform doesn't have confirmed
-knowledge of the exact argument shape `hl.window_rule()`/`hl.bind()` expect
-in every real config, and would rather say so than guess and silently
-write something wrong.
+wrap calls in `hl.on("hyprland.start", function() ... end)`); Window Rules,
+Keybinds, and Monitors are hyprlang-only for now — Hyprform doesn't have
+confirmed knowledge of the exact argument shape `hl.window_rule()`/
+`hl.bind()`/`hl.monitor()` expect in every real config, and would rather
+say so than guess and silently write something wrong.
+
+### Live Hyprland assists
+
+If Hyprland is actually running while you use Hyprform (checked via
+`hyprctl`, and never required — everything above still works from a plain
+copy of your config), a few of these forms get real data instead of asking
+you to already know Hyprland's own inspection commands:
+
+- **Monitors**: a "Detect connected monitors" button lists your actually
+  connected displays (via `hyprctl monitors`) so you can pick the real
+  port name instead of guessing at "DP-1" vs "HDMI-A-1".
+- **Window Rules**: a "Pick a running window" button lists your currently
+  open windows (via `hyprctl clients`) and fills in the class name for
+  you — no more opening a terminal to run `hyprctl clients` just to find
+  out what an app calls itself.
+- **Keybinds**: a "Listen for keypress" button captures your actual next
+  key combo and fills in Modifiers/Key — no need to know Hyprland's key
+  naming at all.
+
+Saving also runs `hyprctl reload` when Hyprland is running, and reports
+whether it actually succeeded (rather than the old silent best-effort).
 
 ## Reviewing changes before they're written
 
@@ -120,13 +143,7 @@ have all been tested against a real hybrid hyprlang+Lua Caelestia config
 (69 keybinds, 13 autostart entries, 14 env vars, 7 window rules all
 discovered and correctly classified editable/read-only) as well as a
 synthetic plain hyprlang `.conf`. Run `pytest` for the automated test suite
-(30 tests).
-
-Not yet built: adding brand-new Monitors from the GUI (editing an existing
-one is fully supported; adding one safely needs to know which monitor
-ports actually exist, which Hyprform doesn't probe for). A "reload
-Hyprland" confirmation beyond the best-effort `hyprctl reload` on save is
-also still basic.
+(45 tests).
 
 ## Source
 

@@ -9,9 +9,9 @@ from __future__ import annotations
 import datetime
 import difflib
 import shutil
-import subprocess
 from dataclasses import dataclass
 
+from . import hyprctl
 from .hyprlang.writer import serialize as serialize_hyprlang
 
 
@@ -53,7 +53,11 @@ def unified_diffs(tree) -> dict[str, str]:
     return diffs
 
 
-def save(tree, reload_hyprland: bool = False) -> list[SavedFile]:
+def save(tree, reload_hyprland: bool = False) -> tuple[list[SavedFile], str | None]:
+    """Writes every pending change to disk. Returns the list of files
+    actually written, plus a human-readable reload status message (None if
+    a reload wasn't requested at all).
+    """
     changed = pending_changes(tree)
     saved: list[SavedFile] = []
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -69,7 +73,8 @@ def save(tree, reload_hyprland: bool = False) -> list[SavedFile]:
         saved.append(SavedFile(path=path, backup_path=backup_path, diff_lines_changed=changed_count))
         tree.original_text[path] = new_text
 
+    reload_message = None
     if saved and reload_hyprland:
-        subprocess.run(["hyprctl", "reload"], capture_output=True)
+        _ok, reload_message = hyprctl.reload()
 
-    return saved
+    return saved, reload_message
