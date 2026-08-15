@@ -4,7 +4,7 @@ A GUI for editing Hyprland's config. No nano, no learning hyprlang or Lua syntax
 
 Hyprland configs come in two shapes these days: the classic `hyprland.conf`
 (hyprlang: `key = value` and `block { ... }`), and, on newer installs
-(Hyprland ≥0.55, including Caelestia-based setups), a native Lua config
+(Hyprland ≥0.55), a native Lua config
 (`hyprland.lua` calling `hl.config({...})`, `hl.bind()`, `hl.env()`, etc.).
 Hyprform reads both, follows `source =` / `require(...)` across however many
 files your config is split into, and gives you plain-English forms instead
