@@ -18,9 +18,18 @@ of either syntax.
 
 ## What it covers
 
-- **Appearance** — gaps, border, rounding, blur, shadow, animations, layout
-- **Behavior** — DPMS wake, splash/logo, VRR, misc toggles
-- **Input** — keyboard layout, touchpad, gestures
+- **Appearance** — gaps, border thickness and color, snap-to-edge, rounding,
+  opacity, dimming, full blur tuning (strength, passes, contrast,
+  brightness, vibrancy, noise, xray), shadow (size, softness, color),
+  animations
+- **Behavior** — DPMS wake, splash/logo, VRR, focus-on-activate, manual
+  resize/drag animation, terminal swallowing, fullscreen handling, XWayland,
+  and dwindle/master layout tuning (pseudotile, split behavior, master
+  ratio)
+- **Input** — keyboard layout/repeat, mouse sensitivity and acceleration,
+  focus-follows-mouse, touchpad gestures and swipe tuning
+- **Cursor** — hardware cursor mode, auto-hide on idle/typing/touch,
+  per-monitor default, zoom
 - **Monitors, Keybinds, Autostart, Window Rules, Environment** — the
   repeatable-entry parts of your config, shown as lists
 

@@ -392,8 +392,10 @@ def _lua_single_item(value, locator: Locator, module, path: str, label: str) -> 
 
 
 def build_categories(tree) -> list[Category]:
+    from .fields import CATEGORIES
+
     scalars = build_scalar_categories(tree)
-    categories = [Category(name, scalars.get(name, []), []) for name in ("Appearance", "Behavior", "Input")]
+    categories = [Category(name, scalars.get(name, []), []) for name in CATEGORIES]
     categories.append(Category("Monitors", [], list_monitors(tree)))
     categories.append(Category("Keybinds", [], list_keybinds(tree)))
     categories.append(

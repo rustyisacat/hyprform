@@ -14,6 +14,7 @@ CATEGORY_ICONS = {
     "Appearance": "applications-graphics-symbolic",
     "Behavior": "preferences-system-symbolic",
     "Input": "input-keyboard-symbolic",
+    "Cursor": "input-mouse-symbolic",
     "Monitors": "video-display-symbolic",
     "Keybinds": "input-keyboard-symbolic",
     "Autostart": "system-run-symbolic",
