@@ -5,9 +5,9 @@ config tree actually contains — hyprlang, Lua, or a mix of both.
 Every bound item carries enough to both display *and* write back: a getter,
 a setter, which file it lives in, and whether it's actually safe to edit
 (``editable=False`` items are shown read-only with their raw source text —
-see the module docstring in ``knurl.lua.parser`` for why that limit exists).
+see the module docstring in ``hyprform.lua.parser`` for why that limit exists).
 
-Lua setters are built from *locators* (``knurl.lua.locators``), not raw
+Lua setters are built from *locators* (``hyprform.lua.locators``), not raw
 spans — a span captured at bind time goes stale the moment any earlier edit
 in the same file is applied, since every offset after it shifts. Locators
 re-find the value fresh each time, so editing several fields from the same
@@ -262,7 +262,7 @@ def add_autostart(tree, command: str) -> tuple[bool, str]:
             module.insert_after_call(calls[-1], f"hl.exec_cmd({format_literal('string', command)})")
             return True, f"Added to {module.path}"
 
-    return False, "No existing autostart entry found to add alongside — Knurl only adds new Lua statements next to a real existing one, to stay in the same scope."
+    return False, "No existing autostart entry found to add alongside — Hyprform only adds new Lua statements next to a real existing one, to stay in the same scope."
 
 
 def add_environment(tree, name: str, value: str) -> tuple[bool, str]:
@@ -283,7 +283,7 @@ def add_environment(tree, name: str, value: str) -> tuple[bool, str]:
             module.insert_after_call(calls[-1], call_text)
             return True, f"Added to {module.path}"
 
-    return False, "No existing environment entry found to add alongside — Knurl only adds new Lua statements next to a real existing one, to stay in the same scope."
+    return False, "No existing environment entry found to add alongside — Hyprform only adds new Lua statements next to a real existing one, to stay in the same scope."
 
 
 def list_monitors(tree) -> list[ListItem]:

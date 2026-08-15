@@ -1,4 +1,4 @@
-# Knurl
+# Hyprform
 
 A GUI for editing Hyprland's config. No nano, no learning hyprlang or Lua syntax.
 
@@ -6,7 +6,7 @@ Hyprland configs come in two shapes these days: the classic `hyprland.conf`
 (hyprlang: `key = value` and `block { ... }`), and, on newer installs
 (Hyprland ≥0.55, including Caelestia-based setups), a native Lua config
 (`hyprland.lua` calling `hl.config({...})`, `hl.bind()`, `hl.env()`, etc.).
-Knurl reads both, follows `source =` / `require(...)` across however many
+Hyprform reads both, follows `source =` / `require(...)` across however many
 files your config is split into, and gives you plain-English forms instead
 of either syntax.
 
@@ -21,7 +21,7 @@ of either syntax.
 ## What it deliberately doesn't try to do
 
 Hyprland's Lua config is *real Lua* — full programs, not just settings.
-Knurl only edits values it can prove are safe: plain literals (strings,
+Hyprform only edits values it can prove are safe: plain literals (strings,
 numbers, booleans) and arrays/tables of those. Anything built by a loop,
 helper function, or string concatenation is shown read-only with its actual
 source text, not silently guessed at. A field that's a reference to a shared
@@ -31,13 +31,13 @@ source — most Caelestia-style setups keep the actual tunable values in one
 
 Every edit is a surgical text replacement — untouched lines in your config
 never move or reformat. Every save writes a timestamped backup
-(`<file>.knurl-bak-<timestamp>`) alongside the original before touching it.
+(`<file>.hyprform-bak-<timestamp>`) alongside the original before touching it.
 
 ## Install
 
 ```
 uv tool install --editable .
-knurl
+hyprform
 ```
 
 To make it show up in your app launcher (wofi/rofi/fuzzel, GNOME/KDE menus,
@@ -45,14 +45,14 @@ anything that reads the freedesktop `.desktop` spec):
 
 ```
 mkdir -p ~/.local/share/applications
-cp data/dev.rustyisacat.Knurl.desktop ~/.local/share/applications/
+cp data/dev.rustyisacat.Hyprform.desktop ~/.local/share/applications/
 ```
 
 Or point it at a specific config directory (useful for testing against a
 copy before trusting it with your real one):
 
 ```
-knurl --hypr-dir ~/some/other/hypr/config
+hyprform --hypr-dir ~/some/other/hypr/config
 ```
 
 ## Requirements
@@ -71,7 +71,7 @@ discovered and correctly classified editable/read-only) as well as a
 synthetic plain hyprlang `.conf`. Run `pytest` for the automated test suite.
 
 Not yet built: adding brand-new entries (keybinds, autostart commands,
-window rules, env vars, monitors) from the GUI — today Knurl edits every
+window rules, env vars, monitors) from the GUI — today Hyprform edits every
 value it discovers in your existing config, but doesn't yet offer an "add
 new" flow for any category. A "reload Hyprland" confirmation beyond the
 best-effort `hyprctl reload` on save is also still basic.

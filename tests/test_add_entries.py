@@ -1,6 +1,6 @@
-from knurl import discovery
-from knurl.hyprlang.writer import serialize as serialize_hyprlang
-from knurl.schema.binder import add_autostart, add_environment
+from hyprform import discovery
+from hyprform.hyprlang.writer import serialize as serialize_hyprlang
+from hyprform.schema.binder import add_autostart, add_environment
 
 
 def test_add_autostart_hyprlang(tmp_path):

@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from knurl.lua.locators import ArrayItem, CallArg, ReturnTableField, TableField, make_setter
-from knurl.lua.parser import LuaModule
-from knurl.lua.values import ArrayValue, LiteralValue, OpaqueValue, TableValue
+from hyprform.lua.locators import ArrayItem, CallArg, ReturnTableField, TableField, make_setter
+from hyprform.lua.parser import LuaModule
+from hyprform.lua.values import ArrayValue, LiteralValue, OpaqueValue, TableValue
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

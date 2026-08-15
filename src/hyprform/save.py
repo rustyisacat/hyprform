@@ -40,7 +40,7 @@ def save(tree, reload_hyprland: bool = False) -> list[SavedFile]:
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
     for path, new_text in changed.items():
-        backup_path = f"{path}.knurl-bak-{timestamp}"
+        backup_path = f"{path}.hyprform-bak-{timestamp}"
         shutil.copy2(path, backup_path)
         with open(path, "w") as f:
             f.write(new_text)

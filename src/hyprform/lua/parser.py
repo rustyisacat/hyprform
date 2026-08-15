@@ -1,6 +1,6 @@
 """Reads a Lua config file (Hyprland's native ``hl.*`` config style, or a
 plain ``return { ... }`` module like ``variables.lua``) into the typed value
-tree in :mod:`knurl.lua.values`.
+tree in :mod:`hyprform.lua.values`.
 
 Only the safe, common subset is classified as editable: string/number/bool
 literals, arrays of those, and tables of those (recursively). Everything
@@ -37,7 +37,7 @@ def _dotted_name(func_node) -> str | None:
 
 
 def classify(node, source: str):
-    """Turn a luaparser expression node into a knurl value, recursively."""
+    """Turn a luaparser expression node into a hyprform value, recursively."""
     if isinstance(node, n.String):
         raw_bytes = node.s
         text = raw_bytes.decode() if isinstance(raw_bytes, bytes) else raw_bytes
@@ -125,7 +125,7 @@ def find_return_table(tree, source: str) -> TableValue | None:
 
 class LuaModule:
     """A parsed Lua file: source text + tree + the call sites and top-level
-    return table knurl knows how to edit.
+    return table hyprform knows how to edit.
     """
 
     RECOGNIZED_CALLS = {

@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from knurl.hyprlang import parser, writer
-from knurl.hyprlang.model import KeyValue
+from hyprform.hyprlang import parser, writer
+from hyprform.hyprlang.model import KeyValue
 
 FIXTURE = Path(__file__).parent / "fixtures" / "sample.conf"
 

@@ -22,9 +22,9 @@ CATEGORY_ICONS = {
 }
 
 
-class KnurlWindow(Adw.ApplicationWindow):
+class HyprformWindow(Adw.ApplicationWindow):
     def __init__(self, app, hypr_dir: str):
-        super().__init__(application=app, title="Knurl", default_width=980, default_height=680)
+        super().__init__(application=app, title="Hyprform", default_width=980, default_height=680)
         self.hypr_dir = hypr_dir
         self.tree = None
         self.categories = []
@@ -46,7 +46,7 @@ class KnurlWindow(Adw.ApplicationWindow):
     def _build_sidebar(self):
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar()
-        header.set_title_widget(Adw.WindowTitle(title="Knurl", subtitle=self.hypr_dir))
+        header.set_title_widget(Adw.WindowTitle(title="Hyprform", subtitle=self.hypr_dir))
         toolbar.add_top_bar(header)
 
         self.sidebar_list = Gtk.ListBox()
@@ -55,7 +55,7 @@ class KnurlWindow(Adw.ApplicationWindow):
         self.sidebar_list.connect("row-selected", self._on_category_selected)
         toolbar.set_content(Gtk.ScrolledWindow(child=self.sidebar_list, vexpand=True))
 
-        page = Adw.NavigationPage(title="Knurl", child=toolbar)
+        page = Adw.NavigationPage(title="Hyprform", child=toolbar)
         self.split_view.set_sidebar(page)
 
     def _build_content_placeholder(self):
@@ -102,7 +102,7 @@ class KnurlWindow(Adw.ApplicationWindow):
             row.add_prefix(Gtk.Image.new_from_icon_name(icon_name))
             count = len(cat.scalar_fields) + len(cat.list_items)
             row.set_subtitle(f"{count} setting{'s' if count != 1 else ''}")
-            row.knurl_category = cat.name  # type: ignore[attr-defined]
+            row.hyprform_category = cat.name  # type: ignore[attr-defined]
             self.sidebar_list.append(row)
 
     # -- rendering --------------------------------------------------------
@@ -110,7 +110,7 @@ class KnurlWindow(Adw.ApplicationWindow):
     def _on_category_selected(self, _list, row):
         if row is None:
             return
-        self._show_category(row.knurl_category)
+        self._show_category(row.hyprform_category)
 
     def _show_category(self, name: str):
         self._current_category_name = name
