@@ -220,11 +220,14 @@ def build_scalar_categories(tree) -> dict[str, list[BoundField]]:
 # ---------------------------------------------------------------------------
 
 
+_AUTOSTART_DESCRIPTION = "Runs automatically, once, when Hyprland starts."
+
+
 def list_autostart(tree) -> list[ListItem]:
     items: list[ListItem] = []
     for path, doc in tree.hyprlang_docs.items():
         for kv in doc.root.find_all("exec-once"):
-            items.append(_hyprlang_string_item(kv, path))
+            items.append(_hyprlang_string_item(kv, path, label="Command", description=_AUTOSTART_DESCRIPTION))
     for path, module in tree.lua_modules.items():
         calls = [c for c in module.call_sites if c.dotted_name == "hl.exec_cmd"]
         for i, call in enumerate(calls):
@@ -232,7 +235,7 @@ def list_autostart(tree) -> list[ListItem]:
                 continue
             value = call.args[0]
             locator = CallArg("hl.exec_cmd", i, 0)
-            items.append(_lua_single_item(value, locator, module, path, "Command"))
+            items.append(_lua_single_item(value, locator, module, path, "Command", _AUTOSTART_DESCRIPTION))
     return items
 
 
@@ -251,7 +254,7 @@ def list_environment(tree) -> list[ListItem]:
             name = name_arg.value if isinstance(name_arg, LiteralValue) else name_arg.raw
             if isinstance(val_arg, LiteralValue):
                 locator = CallArg("hl.env", i, 1)
-                field = _literal_field("Value", "", val_arg, locator, module, path)
+                field = _literal_field("Value", "The value assigned to this environment variable, set before Hyprland starts.", val_arg, locator, module, path)
                 items.append(ListItem(summary=str(name), fields=[field], source_file=path, editable=True))
             else:
                 items.append(ListItem(summary=f"{name} = {val_arg.raw}", fields=[], source_file=path, editable=False, raw=val_arg.raw))
@@ -331,6 +334,27 @@ def _monitor_hyprlang_item(kv: KeyValue, path: str) -> ListItem:
     return ListItem(summary=summary, fields=fields, source_file=path, editable=True)
 
 
+_MONITOR_LUA_FIELDS = {
+    "name": ("Name", "Which monitor this applies to (its port name, e.g. 'DP-1')."),
+    "width": ("Width", "Horizontal resolution, in pixels."),
+    "height": ("Height", "Vertical resolution, in pixels."),
+    "refreshRate": ("Refresh rate", "How many times per second the display refreshes, in Hz."),
+    "x": ("X position", "Horizontal position relative to other monitors, in pixels."),
+    "y": ("Y position", "Vertical position relative to other monitors, in pixels."),
+    "scale": ("Scale", "Display scaling factor (e.g. 1 or 1.5)."),
+    "transform": ("Rotation", "Screen rotation/flip transform (0 = normal)."),
+    "vrr": ("Adaptive sync (VRR)", "Lets this monitor's refresh rate match the frame rate to reduce stutter."),
+    "mirror": ("Mirror of", "Name of another monitor this one duplicates the image of."),
+    "bitdepth": ("Color bit depth", "Bits per color channel (commonly 8 or 10)."),
+    "disabled": ("Disabled", "Turns this monitor off entirely."),
+}
+
+
+def _monitor_lua_field(key: str, value, locator, module, path: str) -> BoundField:
+    label, description = _MONITOR_LUA_FIELDS.get(key, (key, "A monitor setting from your Lua config."))
+    return _literal_field(label, description, value, locator, module, path)
+
+
 def list_monitors(tree) -> list[ListItem]:
     items: list[ListItem] = []
     for path, doc in tree.hyprlang_docs.items():
@@ -346,7 +370,7 @@ def list_monitors(tree) -> list[ListItem]:
                 summary = ", ".join(f"{k}={v.value if isinstance(v, LiteralValue) else v.raw}" for k, v in table.fields.items())
                 base = CallArg("hl.monitor", i, 0)
                 fields = [
-                    _literal_field(k, "", v, TableField(base, (k,)), module, path)
+                    _monitor_lua_field(k, v, TableField(base, (k,)), module, path)
                     for k, v in table.fields.items()
                     if isinstance(v, LiteralValue)
                 ]
@@ -375,12 +399,18 @@ def add_monitor(tree, name: str, resolution: str, position: str, scale: str) -> 
     return False, "No config file found to add a monitor to."
 
 
+_WINDOW_RULE_DESCRIPTIONS = {
+    "windowrule": "Which window(s) this affects and what happens to them, in hyprlang's older rule,match syntax. Edit carefully — this isn't broken into separate fields the way rules added through Hyprform are.",
+    "windowrulev2": "Which window(s) this affects and what happens to them, in hyprlang's rule,match:value syntax (e.g. 'float,class:^(pavucontrol)$'). Edit carefully — this isn't broken into separate fields the way rules added through Hyprform are.",
+}
+
+
 def list_window_rules(tree) -> list[ListItem]:
     items: list[ListItem] = []
     for path, doc in tree.hyprlang_docs.items():
         for key in ("windowrule", "windowrulev2"):
             for kv in doc.root.find_all(key):
-                items.append(_hyprlang_string_item(kv, path))
+                items.append(_hyprlang_string_item(kv, path, label="Rule", description=_WINDOW_RULE_DESCRIPTIONS[key]))
     for path, module in tree.lua_modules.items():
         for call in module.call_sites:
             if call.dotted_name != "hl.window_rule" or not call.args:
@@ -427,13 +457,26 @@ def add_window_rule(tree, match_by: str, match_value: str, rule_type: str, rule_
 
 _CAMEL_RE = re.compile(r"(?<!^)(?=[A-Z])")
 
+_BIND_KEY_INFO = {
+    "bind": ("Keybind", "Fires once when this key combo is pressed."),
+    "binde": ("Keybind (repeats)", "Fires repeatedly while this key combo is held down."),
+    "bindm": ("Mouse bind", "For mouse-driven actions like dragging to move or resize a window."),
+    "bindr": ("Keybind (on release)", "Fires when this key combo is released, instead of when pressed."),
+    "bindl": ("Keybind (works when locked)", "Fires even while the screen is locked."),
+    "bindn": ("Keybind (variant)", "A less common keybind variant — check Hyprland's own binding docs for its exact behavior."),
+    "bindt": ("Keybind (variant)", "A less common keybind variant — check Hyprland's own binding docs for its exact behavior."),
+    "bindi": ("Keybind (variant)", "A less common keybind variant — check Hyprland's own binding docs for its exact behavior."),
+    "binds": ("Keybind (variant)", "A less common keybind variant — check Hyprland's own binding docs for its exact behavior."),
+}
+
 
 def list_keybinds(tree) -> list[ListItem]:
     items: list[ListItem] = []
     for path, doc in tree.hyprlang_docs.items():
         for key in BIND_KEYS:
+            label, description = _BIND_KEY_INFO.get(key, (key, ""))
             for kv in doc.root.find_all(key):
-                items.append(_hyprlang_string_item(kv, path, label=key))
+                items.append(_hyprlang_string_item(kv, path, label=label, description=description))
 
     for path, module in tree.lua_modules.items():
         rt = module.return_table
@@ -450,7 +493,7 @@ def list_keybinds(tree) -> list[ListItem]:
             elif isinstance(value, ArrayValue):
                 base = ReturnTableField(name)
                 fields = [
-                    _literal_field(f"{label} (option {i + 1})", "", item, ArrayItem(base, i), module, path)
+                    _literal_field(f"{label} (option {i + 1})", "An additional key combination that also triggers this action.", item, ArrayItem(base, i), module, path)
                     for i, item in enumerate(value.items)
                 ]
                 items.append(ListItem(summary=f"{label} ({len(value.items)} shortcuts)", fields=fields, source_file=path, editable=True))
@@ -505,17 +548,17 @@ def _literal_field(label: str, description: str, value: LiteralValue, locator: L
     return BoundField(label, description, value.kind, value.value, path, True, (), "", setter)
 
 
-def _hyprlang_string_item(kv: KeyValue, path: str, label: str | None = None) -> ListItem:
+def _hyprlang_string_item(kv: KeyValue, path: str, label: str | None = None, description: str = "") -> ListItem:
     def setter(new_value, kv=kv):
         kv.touch(str(new_value))
 
-    field = BoundField(label or kv.key, "", "string", kv.value, path, True, (), "", setter)
+    field = BoundField(label or kv.key, description, "string", kv.value, path, True, (), "", setter)
     return ListItem(summary=kv.value, fields=[field], source_file=path, editable=True)
 
 
-def _lua_single_item(value, locator: Locator, module, path: str, label: str) -> ListItem:
+def _lua_single_item(value, locator: Locator, module, path: str, label: str, description: str = "") -> ListItem:
     if isinstance(value, LiteralValue):
-        field = _literal_field(label, "", value, locator, module, path)
+        field = _literal_field(label, description, value, locator, module, path)
         return ListItem(summary=str(value.value), fields=[field], source_file=path, editable=True)
     return ListItem(summary=value.raw, fields=[], source_file=path, editable=False, raw=value.raw)
 
