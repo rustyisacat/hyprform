@@ -35,6 +35,10 @@ class ReturnTableField:
 
 @dataclass(frozen=True)
 class ArrayItem:
+    """The Nth item of an array value found via another locator (``base``) —
+    e.g. the second shortcut in a keybind that has more than one.
+    """
+
     base: "Locator"
     index: int
 
@@ -58,6 +62,10 @@ class CallArg:
 
 @dataclass(frozen=True)
 class TableField:
+    """A field (possibly nested, e.g. ``general.gaps_in``) inside a table
+    value found via another locator (``base``).
+    """
+
     base: "Locator"
     path: tuple[str, ...]
 

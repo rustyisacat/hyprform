@@ -36,9 +36,11 @@ def pending_changes(tree) -> dict[str, str]:
 
 
 def unified_diffs(tree) -> dict[str, str]:
-    """path -> unified diff text, for every file with pending changes — so
-    the GUI can show exactly what's about to be written before Save
-    actually touches disk.
+    """path -> diff text, for every file with pending changes — so the GUI
+    can show exactly what's about to be written before Save actually
+    touches disk. "Unified diff" is the standard +/- line-by-line format
+    (removed lines prefixed with "-", added lines with "+") that tools like
+    ``git diff`` and ``diff -u`` also use.
     """
     diffs = {}
     for path, new_text in pending_changes(tree).items():

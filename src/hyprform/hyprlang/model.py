@@ -30,6 +30,9 @@ class KeyValue:
     raw_line: str | None = None
 
     def touch(self, new_value: str) -> None:
+        # Marks this line as edited: clearing raw_line tells the writer to
+        # regenerate the line from key/value instead of reusing the
+        # original text verbatim.
         self.value = new_value
         self.raw_line = None
 

@@ -32,6 +32,12 @@ BIND_KEYS = {"bind", "binde", "bindm", "bindr", "bindl", "bindn", "bindt", "bind
 
 @dataclass
 class BoundField:
+    """One editable (or read-only) setting, ready for the GUI to display —
+    a plain-English label/description plus everything needed to read its
+    current value and write a new one back, without the GUI code needing to
+    know whether it actually lives in a hyprlang line or a Lua table.
+    """
+
     label: str
     description: str
     kind: str
@@ -50,6 +56,11 @@ class BoundField:
 
 @dataclass
 class ListItem:
+    """One entry in a repeatable category (a single monitor, keybind,
+    autostart command, window rule, or env var) — ``fields`` holds its own
+    editable pieces, same as a BoundField would for a single setting.
+    """
+
     summary: str
     fields: list[BoundField]
     source_file: str
@@ -83,6 +94,12 @@ class AddSpec:
 
 @dataclass
 class Category:
+    """One entry in the sidebar (Appearance, Keybinds, ...). ``scalar_fields``
+    are single settings like "gap size" (one BoundField each); ``list_items``
+    are the repeatable kind, like the list of all your keybinds (each one a
+    ListItem with its own BoundFields inside).
+    """
+
     name: str
     scalar_fields: list[BoundField]
     list_items: list[ListItem]

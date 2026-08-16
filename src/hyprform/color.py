@@ -48,6 +48,8 @@ def parse_color(raw: str) -> ParsedColor | None:
 
     m = _HEX0X_RE.match(text)
     if m:
+        # Unlike every other format here, Hyprland's 0x style puts the alpha
+        # (transparency) digits *first*, e.g. 0xAARRGGBB, not last.
         a, r, g, b = _split_hex(m.group(1), 4)
         return ParsedColor(r, g, b, a, "0x")
 

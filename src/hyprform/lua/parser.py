@@ -37,7 +37,9 @@ def _dotted_name(func_node) -> str | None:
 
 
 def classify(node, source: str):
-    """Turn a luaparser expression node into a hyprform value, recursively."""
+    """Turn one piece of parsed Lua (a string, a number, a table, ...) into
+    one of the typed values above, recursing into tables field by field.
+    """
     if isinstance(node, n.String):
         raw_bytes = node.s
         text = raw_bytes.decode() if isinstance(raw_bytes, bytes) else raw_bytes
@@ -89,6 +91,9 @@ def find_call_sites(tree, source: str, names: set[str] | None = None) -> list[Ca
     sites: list[CallSite] = []
 
     def walk(node):
+        # Recursively visits every node in the parsed file (function bodies,
+        # table contents, if-blocks, everything) looking for Call nodes,
+        # since a hl.config(...) call could be nested arbitrarily deep.
         if isinstance(node, n.Call):
             dotted = _dotted_name(node.func)
             if dotted is not None and (names is None or dotted in names):

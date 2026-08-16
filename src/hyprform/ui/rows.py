@@ -20,7 +20,7 @@ def build_field_row(field: BoundField, on_changed) -> Adw.PreferencesRow:
         row = Adw.ActionRow(title=field.label, subtitle=f"{field.description}\nLinked to: {field.value}" if field.description else f"Linked to: {field.value}")
         row.set_subtitle_lines(0)
         icon = Gtk.Image.new_from_icon_name("view-refresh-symbolic")
-        icon.set_tooltip_text("Computed value — edit it in the Advanced view for this file.")
+        icon.set_tooltip_text("This value is built by a script in your config, not a plain setting — Hyprform can't safely edit it. Change it directly in the config file if you need to.")
         row.add_suffix(icon)
         row.set_sensitive(False)
         return row

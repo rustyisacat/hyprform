@@ -1,3 +1,12 @@
+"""Hyprform's main window: a sidebar of categories (Appearance, Keybinds,
+...) on the left and that category's settings on the right — the standard
+libadwaita "preferences" layout (``Adw.NavigationSplitView``). Clicking a
+sidebar row calls ``_show_category``, which asks ``schema.binder`` for that
+category's data and hands each field to ``ui.rows`` to turn into an actual
+GTK widget. Nothing in this file knows about hyprlang or Lua syntax —
+that's the whole point of the schema/binder split.
+"""
+
 from __future__ import annotations
 
 import gi

@@ -7,8 +7,8 @@ pair up in whichever representation the user's config actually uses.
 
 This is not an exhaustive mirror of every hyprlang option (there are
 hundreds); it covers what people actually reach for when tweaking the look
-and feel of their setup. Anything not listed here still shows up in the
-"Advanced" raw view, untouched.
+and feel of their setup. Anything not listed here simply doesn't show up in
+Hyprform's GUI at all — it's left alone in the config file, untouched.
 """
 
 from __future__ import annotations

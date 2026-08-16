@@ -1,3 +1,8 @@
+"""Hyprform's entry point: parses command-line args and starts the GTK app.
+
+This is the file `hyprform` on the command line actually runs.
+"""
+
 from __future__ import annotations
 
 import argparse
@@ -22,6 +27,9 @@ class HyprformApplication(Adw.Application):
         self.window = None
 
     def do_activate(self):
+        # GTK calls this automatically once the app has finished starting up
+        # (via app.run() below) — it's where we actually create and show the
+        # window, rather than in __init__, which runs too early for that.
         if self.window is None:
             self.window = HyprformWindow(self, self.hypr_dir)
         self.window.present()

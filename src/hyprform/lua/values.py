@@ -1,9 +1,10 @@
 """Typed, editable representations of values found inside a parsed Lua file.
 
 Every value knows the exact (start, stop) character range it occupies in the
-original source (inclusive, from luaparser's antlr tokens), so an edit can be
-applied as a surgical substring replacement instead of a full regeneration —
-anything the classifier doesn't understand is left completely untouched.
+original source text (the ``luaparser`` library hands these back as part of
+its parsed output), so an edit can be applied as a surgical substring
+replacement instead of a full regeneration — anything the classifier
+doesn't understand is left completely untouched.
 """
 
 from __future__ import annotations
@@ -51,9 +52,10 @@ class TableValue:
 
 @dataclass
 class OpaqueValue:
-    """Anything not classified above: a Name/Index reference (``vars.foo``),
-    a string concatenation, a function call, etc. Shown read-only in the GUI
-    with its source text — never edited via a form, only via the raw view.
+    """Anything not classified above: a reference to a variable elsewhere in
+    the config (``vars.foo``), two strings joined together, a function call,
+    etc. — real Lua code Hyprform doesn't try to understand. Shown read-only
+    in the GUI with its actual source text, never edited via a form.
     """
 
     raw: str

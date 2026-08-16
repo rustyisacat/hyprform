@@ -19,10 +19,22 @@ _TIMEOUT = 2.0
 
 
 def is_available() -> bool:
+    """True if we're actually running inside a live Hyprland session with
+    the ``hyprctl`` command available to talk to it. HYPRLAND_INSTANCE_SIGNATURE
+    is an environment variable Hyprland itself sets for every process running
+    under it — its presence is the standard way to detect "am I on Hyprland
+    right now?" rather than, say, testing against a copied config on some
+    other desktop.
+    """
     return bool(os.environ.get("HYPRLAND_INSTANCE_SIGNATURE")) and shutil.which("hyprctl") is not None
 
 
 def _run_json(args: list[str]):
+    """Runs ``hyprctl -j <args>`` and parses its JSON output (the ``-j`` flag
+    is hyprctl's own "give me machine-readable output" option). Returns None
+    on literally any failure — not running, not installed, bad output,
+    taking too long — so callers never need their own try/except.
+    """
     if not is_available():
         return None
     try:
