@@ -67,6 +67,21 @@ def client_picker_rows(clients: list[dict]) -> list[tuple[str, str, str]]:
     """(primary, secondary, value) rows for a hyprctl clients -j result."""
     return [(c.get("title") or "(untitled)", c.get("class", "?"), c.get("class", "")) for c in clients]
 
+
+def keybind_search_text(item) -> str:
+    """All the text worth matching a Keybinds search query against — the
+    summary line plus every field's label and current value — so searching
+    finds a match whether it's a modifier, a key, or an action/command.
+    hyprlang binds keep everything in one summary string (e.g. "SUPER, Q,
+    exec, kitty"); Lua-defined binds split the action name into the field
+    label and the key combo into the field value, so both need checking.
+    """
+    parts = [item.summary]
+    for field in item.fields:
+        parts.append(field.label)
+        parts.append(str(field.value))
+    return " ".join(parts).lower()
+
 CATEGORY_ICONS = {
     "Appearance": "applications-graphics-symbolic",
     "Behavior": "preferences-system-symbolic",
@@ -196,15 +211,51 @@ class HyprformWindow(Adw.ApplicationWindow):
             page.add(group)
 
         if cat.list_items:
-            group = Adw.PreferencesGroup(title=name, description=f"{len(cat.list_items)} entries found in your config")
-            for item in cat.list_items:
-                group.add(build_list_item_row(item, self._on_field_changed))
-            page.add(group)
+            if name == "Keybinds":
+                self._build_keybinds_list_group(page, cat)
+            else:
+                group = Adw.PreferencesGroup(title=name, description=f"{len(cat.list_items)} entries found in your config")
+                for item in cat.list_items:
+                    group.add(build_list_item_row(item, self._on_field_changed))
+                page.add(group)
 
         if cat.add_spec is not None:
             page.add(self._build_add_group(cat))
 
         self.content_scroller.set_child(outer)
+
+    def _build_keybinds_list_group(self, page, cat):
+        """Keybinds gets its own search box (unlike the other list
+        categories) since a real config can easily have 50+ of them —
+        filters live as you type, by key/modifier or by action, without
+        rebuilding the search box itself (which would steal keyboard focus
+        mid-keystroke).
+        """
+        search_group = Adw.PreferencesGroup()
+        search_entry = Gtk.SearchEntry(placeholder_text="Search by key or action (e.g. “SUPER” or “exec”)…")
+        search_group.add(search_entry)
+        page.add(search_group)
+
+        list_group = Adw.PreferencesGroup(title="Keybinds")
+        page.add(list_group)
+
+        rows: list[Gtk.Widget] = []
+
+        def populate(query: str):
+            for row in rows:
+                list_group.remove(row)
+            rows.clear()
+            q = query.strip().lower()
+            matched = [item for item in cat.list_items if not q or q in keybind_search_text(item)]
+            for item in matched:
+                row = build_list_item_row(item, self._on_field_changed)
+                list_group.add(row)
+                rows.append(row)
+            total = len(cat.list_items)
+            list_group.set_description(f"{len(matched)} of {total} entries match" if q else f"{total} entries found in your config")
+
+        search_entry.connect("search-changed", lambda entry: populate(entry.get_text()))
+        populate("")
 
     def _on_search_changed(self, entry):
         query = entry.get_text().strip()

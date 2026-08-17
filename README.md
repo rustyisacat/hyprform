@@ -39,7 +39,10 @@ of either syntax.
   an "add new" form for every one of them (see below)
 - **Search** — a search bar in the sidebar filters every setting across
   every category at once, by name and description, so you don't have to
-  know which category something lives in
+  know which category something lives in. Keybinds also gets its own
+  search box right on the category page — since a real config can easily
+  have 50+ of them — that filters live as you type by either the key/
+  modifiers or the action (e.g. "SUPER" or "exec" both work)
 
 ## Adding new entries
 
