@@ -50,6 +50,27 @@ def _register_app_icon() -> None:
         pass
 
 
+def _load_stylesheet() -> None:
+    """Loads Hyprform's small CSS file (a faint purple-to-blue wash on the
+    header bars and sidebar, echoing the app icon — see style.css for why
+    it deliberately never touches anything interactive). Best effort only.
+    """
+    try:
+        css_path = pathlib.Path(__file__).resolve().parent / "style.css"
+        if not css_path.is_file():
+            return
+        display = Gdk.Display.get_default()
+        if display is None:
+            return
+        provider = Gtk.CssProvider()
+        provider.load_from_path(str(css_path))
+        Gtk.StyleContext.add_provider_for_display(
+            display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
 class HyprformApplication(Adw.Application):
     def __init__(self, hypr_dir: str):
         super().__init__(application_id=APP_ID, flags=Gio.ApplicationFlags.DEFAULT_FLAGS)
@@ -59,6 +80,7 @@ class HyprformApplication(Adw.Application):
     def do_startup(self):
         Adw.Application.do_startup(self)
         _register_app_icon()
+        _load_stylesheet()
 
         about_action = Gio.SimpleAction.new("about", None)
         about_action.connect("activate", self._on_about)

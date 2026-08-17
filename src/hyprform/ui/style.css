@@ -1,0 +1,18 @@
+/* Hyprform's own subtle branding: a faint echo of the app icon's
+   purple-to-blue gradient behind the chrome (header bars, sidebar rail).
+   Deliberately kept out of anything interactive — buttons, selected rows,
+   switches — so it never fights whatever accent color the user has picked
+   for their own GTK theme. This is decoration, not a color scheme.
+*/
+
+.hyprform-headerbar {
+  background-image: linear-gradient(
+    120deg,
+    rgba(139, 92, 246, 0.10) 0%,
+    rgba(59, 130, 246, 0.04) 100%
+  );
+}
+
+.hyprform-sidebar-rail {
+  background-color: rgba(139, 92, 246, 0.035);
+}

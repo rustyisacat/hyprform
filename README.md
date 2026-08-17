@@ -109,6 +109,9 @@ still keeps the existing timestamped backup
   page — there's always something to click.
 - Hyprform remembers your window size (and whether it was maximized)
   between launches, like any other desktop app.
+- The header bars and sidebar carry a faint purple-to-blue wash echoing the
+  app icon — deliberately kept off every interactive element so it never
+  fights whatever accent color you've set for your own GTK theme.
 
 ### Undo and redo
 

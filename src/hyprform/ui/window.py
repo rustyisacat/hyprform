@@ -208,7 +208,9 @@ class HyprformWindow(Adw.ApplicationWindow):
 
     def _build_sidebar(self):
         toolbar = Adw.ToolbarView()
+        toolbar.add_css_class("hyprform-sidebar-rail")
         header = Adw.HeaderBar()
+        header.add_css_class("hyprform-headerbar")
         self._base_subtitle = self.hypr_dir
         self.window_title = Adw.WindowTitle(title="Hyprform", subtitle=self._base_subtitle)
         header.set_title_widget(self.window_title)
@@ -259,6 +261,7 @@ class HyprformWindow(Adw.ApplicationWindow):
     def _build_content_placeholder(self):
         self.content_toolbar = Adw.ToolbarView()
         self.content_header = Adw.HeaderBar()
+        self.content_header.add_css_class("hyprform-headerbar")
 
         self.undo_button = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text="Undo last change (Ctrl+Z)")
         self.undo_button.set_action_name("win.undo")
