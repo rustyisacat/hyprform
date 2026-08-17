@@ -13,7 +13,8 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gtk  # noqa: E402
+gi.require_version("Pango", "1.0")
+from gi.repository import Adw, Gdk, Gio, Gtk, Pango  # noqa: E402
 
 from .. import discovery, hyprctl, save as save_mod  # noqa: E402
 from ..schema.binder import build_categories  # noqa: E402
@@ -82,6 +83,47 @@ def keybind_search_text(item) -> str:
         parts.append(str(field.value))
     return " ".join(parts).lower()
 
+def _apply_diff_coloring(buffer: Gtk.TextBuffer, text: str) -> None:
+    """Colors a unified diff the way every other diff viewer does: added
+    lines green, removed lines red, file/hunk headers muted — so a save
+    with several changed lines is scannable at a glance instead of being a
+    wall of identical-looking monospace text.
+    """
+    buffer.set_text(text)
+    added = buffer.create_tag("diff-added", foreground="#26a269")
+    removed = buffer.create_tag("diff-removed", foreground="#c01c28")
+    header = buffer.create_tag("diff-header", foreground="#1c71d8", weight=Pango.Weight.BOLD)
+    hunk = buffer.create_tag("diff-hunk", foreground="#9a9996", style=Pango.Style.ITALIC)
+
+    for line_no in range(buffer.get_line_count()):
+        _found, start = buffer.get_iter_at_line(line_no)
+        end = start.copy()
+        end.forward_to_line_end()
+        line_text = buffer.get_text(start, end, False)
+        if line_text.startswith("+++") or line_text.startswith("---"):
+            buffer.apply_tag(header, start, end)
+        elif line_text.startswith("@@"):
+            buffer.apply_tag(hunk, start, end)
+        elif line_text.startswith("+"):
+            buffer.apply_tag(added, start, end)
+        elif line_text.startswith("-"):
+            buffer.apply_tag(removed, start, end)
+
+
+def build_shortcuts_window(parent) -> Gtk.ShortcutsWindow:
+    window = Gtk.ShortcutsWindow(transient_for=parent, modal=True)
+    section = Gtk.ShortcutsSection(section_name="main")
+    group = Gtk.ShortcutsGroup(title="General")
+    group.append(Gtk.ShortcutsShortcut(title="Save changes", accelerator="<Primary>s"))
+    group.append(Gtk.ShortcutsShortcut(title="Search all settings", accelerator="<Primary>f"))
+    group.append(Gtk.ShortcutsShortcut(title="Clear the current search", accelerator="Escape"))
+    group.append(Gtk.ShortcutsShortcut(title="Show this window", accelerator="<Primary>question"))
+    group.append(Gtk.ShortcutsShortcut(title="Quit Hyprform", accelerator="<Primary>q"))
+    section.add_group(group)
+    window.add_section(section)
+    return window
+
+
 CATEGORY_ICONS = {
     "Appearance": "applications-graphics-symbolic",
     "Behavior": "preferences-system-symbolic",
@@ -112,14 +154,32 @@ class HyprformWindow(Adw.ApplicationWindow):
 
         self._build_sidebar()
         self._build_content_placeholder()
+        self._build_actions()
         self._load()
 
     # -- chrome -------------------------------------------------------
 
+    def _build_actions(self):
+        save_action = Gio.SimpleAction.new("save", None)
+        save_action.connect("activate", lambda *_a: self._on_save_clicked(None))
+        self.add_action(save_action)
+
+        focus_search_action = Gio.SimpleAction.new("focus-search", None)
+        focus_search_action.connect("activate", lambda *_a: self.search_entry.grab_focus())
+        self.add_action(focus_search_action)
+
     def _build_sidebar(self):
         toolbar = Adw.ToolbarView()
         header = Adw.HeaderBar()
-        header.set_title_widget(Adw.WindowTitle(title="Hyprform", subtitle=self.hypr_dir))
+        self._base_subtitle = self.hypr_dir
+        self.window_title = Adw.WindowTitle(title="Hyprform", subtitle=self._base_subtitle)
+        header.set_title_widget(self.window_title)
+
+        menu = Gio.Menu()
+        menu.append("Keyboard Shortcuts", "app.shortcuts")
+        menu.append("About Hyprform", "app.about")
+        menu_button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu, primary=True, tooltip_text="Main Menu")
+        header.pack_end(menu_button)
         toolbar.add_top_bar(header)
 
         self.search_entry = Gtk.SearchEntry(placeholder_text="Search all settings…")
@@ -128,6 +188,7 @@ class HyprformWindow(Adw.ApplicationWindow):
         self.search_entry.set_margin_top(8)
         self.search_entry.set_margin_bottom(4)
         self.search_entry.connect("search-changed", self._on_search_changed)
+        self.search_entry.connect("stop-search", lambda entry: entry.set_text(""))
         toolbar.add_top_bar(self.search_entry)
 
         self.sidebar_list = Gtk.ListBox()
@@ -138,6 +199,12 @@ class HyprformWindow(Adw.ApplicationWindow):
 
         page = Adw.NavigationPage(title="Hyprform", child=toolbar)
         self.split_view.set_sidebar(page)
+
+    def _update_window_title(self):
+        subtitle = self._base_subtitle
+        if self.dirty:
+            subtitle += " • Unsaved changes"
+        self.window_title.set_subtitle(subtitle)
 
     def _build_content_placeholder(self):
         self.content_toolbar = Adw.ToolbarView()
@@ -210,14 +277,19 @@ class HyprformWindow(Adw.ApplicationWindow):
                 group.add(build_field_row(field, self._on_field_changed))
             page.add(group)
 
-        if cat.list_items:
-            if name == "Keybinds":
-                self._build_keybinds_list_group(page, cat)
-            else:
-                group = Adw.PreferencesGroup(title=name, description=f"{len(cat.list_items)} entries found in your config")
-                for item in cat.list_items:
-                    group.add(build_list_item_row(item, self._on_field_changed))
-                page.add(group)
+        if cat.list_items and name == "Keybinds":
+            self._build_keybinds_list_group(page, cat)
+        elif cat.list_items:
+            group = Adw.PreferencesGroup(title=name, description=f"{len(cat.list_items)} entries found in your config")
+            for item in cat.list_items:
+                group.add(build_list_item_row(item, self._on_field_changed))
+            page.add(group)
+        elif cat.add_spec is not None:
+            # A list-shaped category with nothing in it yet — say so, rather
+            # than just silently showing the add-a-new-one form with no
+            # context for why the rest of the page looks empty.
+            kind = cat.name.rstrip("s").lower()
+            page.add(Adw.PreferencesGroup(description=f"No {kind}s in your config yet — add one below."))
 
         if cat.add_spec is not None:
             page.add(self._build_add_group(cat))
@@ -234,6 +306,7 @@ class HyprformWindow(Adw.ApplicationWindow):
         search_group = Adw.PreferencesGroup()
         search_entry = Gtk.SearchEntry(placeholder_text="Search by key or action (e.g. “SUPER” or “exec”)…")
         search_group.add(search_entry)
+        search_entry.connect("stop-search", lambda entry: entry.set_text(""))
         page.add(search_group)
 
         list_group = Adw.PreferencesGroup(title="Keybinds")
@@ -247,11 +320,16 @@ class HyprformWindow(Adw.ApplicationWindow):
             rows.clear()
             q = query.strip().lower()
             matched = [item for item in cat.list_items if not q or q in keybind_search_text(item)]
-            for item in matched:
-                row = build_list_item_row(item, self._on_field_changed)
-                list_group.add(row)
-                rows.append(row)
             total = len(cat.list_items)
+            if matched:
+                for item in matched:
+                    row = build_list_item_row(item, self._on_field_changed)
+                    list_group.add(row)
+                    rows.append(row)
+            else:
+                empty_row = Adw.ActionRow(title=f"No keybinds match “{query}”", sensitive=False)
+                list_group.add(empty_row)
+                rows.append(empty_row)
             list_group.set_description(f"{len(matched)} of {total} entries match" if q else f"{total} entries found in your config")
 
         search_entry.connect("search-changed", lambda entry: populate(entry.get_text()))
@@ -340,6 +418,7 @@ class HyprformWindow(Adw.ApplicationWindow):
                         row.set_text("")
                 self.dirty = True
                 self.save_button.set_sensitive(True)
+                self._update_window_title()
                 self._refresh_category_data()
                 self._show_category(cat.name)
 
@@ -496,9 +575,13 @@ class HyprformWindow(Adw.ApplicationWindow):
             return
         self.dirty = True
         self.save_button.set_sensitive(True)
+        self._update_window_title()
         self._refresh_category_data()
 
     def _on_save_clicked(self, _button):
+        if not self.dirty:
+            self._toast("Nothing to save")
+            return
         diffs = save_mod.unified_diffs(self.tree)
         if not diffs:
             self._toast("Nothing to save")
@@ -528,7 +611,7 @@ class HyprformWindow(Adw.ApplicationWindow):
 
         text_view = Gtk.TextView(editable=False, monospace=True, wrap_mode=Gtk.WrapMode.NONE, top_margin=8, bottom_margin=8, left_margin=8, right_margin=8)
         combined = "\n".join(diffs.values())
-        text_view.get_buffer().set_text(combined)
+        _apply_diff_coloring(text_view.get_buffer(), combined)
         scroller = Gtk.ScrolledWindow(child=text_view, vexpand=True, hexpand=True)
         toolbar.set_content(scroller)
 
@@ -544,6 +627,7 @@ class HyprformWindow(Adw.ApplicationWindow):
             return
         self.dirty = False
         self.save_button.set_sensitive(False)
+        self._update_window_title()
         if not saved:
             self._toast("Nothing to save")
             return

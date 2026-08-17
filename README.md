@@ -93,8 +93,30 @@ whether it actually succeeded (rather than the old silent best-effort).
 
 Clicking Save shows a real unified diff of every file about to change —
 old lines and new lines, nothing hidden — before anything touches disk.
-Confirming still keeps the existing timestamped backup
+Added lines are highlighted green and removed lines red, same as a diff
+viewer on GitHub, so a glance tells you what's about to happen. Confirming
+still keeps the existing timestamped backup
 (`<file>.hyprform-bak-<timestamp>`) alongside each touched file.
+
+## Finding your way around
+
+- The header bar's menu button opens **About** (version, license, links)
+  and **Keyboard Shortcuts** (a full reference of everything below).
+- If you have unsaved changes, the window's subtitle says so ("Unsaved
+  changes") so it's always obvious whether Save has anything to do.
+- Categories that start out empty (a fresh config with no window rules yet,
+  say) show a plain-English hint and the add-new form instead of a blank
+  page — there's always something to click.
+
+### Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| `Ctrl+S` | Save (opens the diff review) |
+| `Ctrl+F` | Jump to the sidebar search box |
+| `Escape` | Clear whichever search box you're in |
+| `Ctrl+Q` | Quit |
+| `Ctrl+?` | Open the Keyboard Shortcuts window |
 
 ## What it deliberately doesn't try to do
 

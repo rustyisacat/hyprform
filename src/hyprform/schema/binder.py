@@ -652,4 +652,4 @@ def build_categories(tree) -> list[Category]:
             add_spec=AddSpec([AddField("Name"), AddField("Value")], lambda name, value, tree=tree: add_environment(tree, name, value)),
         )
     )
-    return [c for c in categories if c.scalar_fields or c.list_items]
+    return [c for c in categories if c.scalar_fields or c.list_items or c.add_spec is not None]
