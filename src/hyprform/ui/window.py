@@ -18,6 +18,7 @@ from gi.repository import Adw, Gdk, Gio, Gtk, Pango  # noqa: E402
 
 from .. import discovery, hyprctl, save as save_mod  # noqa: E402
 from ..schema.binder import build_categories  # noqa: E402
+from . import window_state  # noqa: E402
 from .rows import build_field_row, build_list_item_row  # noqa: E402
 
 _MODIFIER_KEYVALS = {
@@ -115,6 +116,8 @@ def build_shortcuts_window(parent) -> Gtk.ShortcutsWindow:
     section = Gtk.ShortcutsSection(section_name="main")
     group = Gtk.ShortcutsGroup(title="General")
     group.append(Gtk.ShortcutsShortcut(title="Save changes", accelerator="<Primary>s"))
+    group.append(Gtk.ShortcutsShortcut(title="Undo the last change", accelerator="<Primary>z"))
+    group.append(Gtk.ShortcutsShortcut(title="Redo", accelerator="<Primary><Shift>z"))
     group.append(Gtk.ShortcutsShortcut(title="Search all settings", accelerator="<Primary>f"))
     group.append(Gtk.ShortcutsShortcut(title="Clear the current search", accelerator="Escape"))
     group.append(Gtk.ShortcutsShortcut(title="Show this window", accelerator="<Primary>question"))
@@ -139,12 +142,32 @@ CATEGORY_ICONS = {
 
 class HyprformWindow(Adw.ApplicationWindow):
     def __init__(self, app, hypr_dir: str):
-        super().__init__(application=app, title="Hyprform", default_width=980, default_height=680)
+        saved_state = window_state.load()
+        super().__init__(
+            application=app,
+            title="Hyprform",
+            default_width=saved_state.get("width", 980),
+            default_height=saved_state.get("height", 680),
+        )
+        if saved_state.get("maximized"):
+            self.maximize()
+
         self.hypr_dir = hypr_dir
         self.tree = None
         self.categories = []
         self.dirty = False
         self._current_category_name = None
+
+        # Linear undo/redo history for field edits: self._history[:pos] is
+        # what's been applied, self._history[pos:] is what redo can replay.
+        # A fresh edit after some undos discards that stale redo tail, same
+        # as every other editor's undo stack. Adding a new list entry isn't
+        # reversible yet, so it's tracked separately in _has_uncommitted_add
+        # rather than pretending it fits this stack.
+        self._history: list[tuple] = []
+        self._history_pos = 0
+        self._clean_pos = 0
+        self._has_uncommitted_add = False
 
         self.toast_overlay = Adw.ToastOverlay()
         self.set_content(self.toast_overlay)
@@ -155,7 +178,12 @@ class HyprformWindow(Adw.ApplicationWindow):
         self._build_sidebar()
         self._build_content_placeholder()
         self._build_actions()
+        self.connect("close-request", self._on_close_request)
         self._load()
+
+    def _on_close_request(self, *_a):
+        window_state.save(self.get_width(), self.get_height(), self.is_maximized())
+        return False  # False lets the window actually close
 
     # -- chrome -------------------------------------------------------
 
@@ -167,6 +195,16 @@ class HyprformWindow(Adw.ApplicationWindow):
         focus_search_action = Gio.SimpleAction.new("focus-search", None)
         focus_search_action.connect("activate", lambda *_a: self.search_entry.grab_focus())
         self.add_action(focus_search_action)
+
+        undo_action = Gio.SimpleAction.new("undo", None)
+        undo_action.set_enabled(False)
+        undo_action.connect("activate", self._on_undo)
+        self.add_action(undo_action)
+
+        redo_action = Gio.SimpleAction.new("redo", None)
+        redo_action.set_enabled(False)
+        redo_action.connect("activate", self._on_redo)
+        self.add_action(redo_action)
 
     def _build_sidebar(self):
         toolbar = Adw.ToolbarView()
@@ -206,13 +244,34 @@ class HyprformWindow(Adw.ApplicationWindow):
             subtitle += " • Unsaved changes"
         self.window_title.set_subtitle(subtitle)
 
+    def _recompute_history_state(self):
+        """Call after anything that changes the undo stack, an add, or a
+        save — keeps the Save button, the window subtitle, and the Undo/Redo
+        actions' enabled state all in sync with one source of truth instead
+        of each edit site having to remember to update all three itself.
+        """
+        self.dirty = self._has_uncommitted_add or self._history_pos != self._clean_pos
+        self.save_button.set_sensitive(self.dirty)
+        self.lookup_action("undo").set_enabled(self._history_pos > 0)
+        self.lookup_action("redo").set_enabled(self._history_pos < len(self._history))
+        self._update_window_title()
+
     def _build_content_placeholder(self):
         self.content_toolbar = Adw.ToolbarView()
         self.content_header = Adw.HeaderBar()
+
+        self.undo_button = Gtk.Button(icon_name="edit-undo-symbolic", tooltip_text="Undo last change (Ctrl+Z)")
+        self.undo_button.set_action_name("win.undo")
+        self.redo_button = Gtk.Button(icon_name="edit-redo-symbolic", tooltip_text="Redo (Ctrl+Shift+Z)")
+        self.redo_button.set_action_name("win.redo")
+
         self.save_button = Gtk.Button(label="Save")
         self.save_button.add_css_class("suggested-action")
         self.save_button.set_sensitive(False)
         self.save_button.connect("clicked", self._on_save_clicked)
+
+        self.content_header.pack_end(self.undo_button)
+        self.content_header.pack_end(self.redo_button)
         self.content_header.pack_end(self.save_button)
         self.content_toolbar.add_top_bar(self.content_header)
 
@@ -416,9 +475,8 @@ class HyprformWindow(Adw.ApplicationWindow):
                         row.set_active(False)
                     else:
                         row.set_text("")
-                self.dirty = True
-                self.save_button.set_sensitive(True)
-                self._update_window_title()
+                self._has_uncommitted_add = True
+                self._recompute_history_state()
                 self._refresh_category_data()
                 self._show_category(cat.name)
 
@@ -568,15 +626,52 @@ class HyprformWindow(Adw.ApplicationWindow):
     def _on_field_changed(self, field, new_value):
         if field.value == new_value:
             return
+        old_value = field.value
         try:
             field.set(new_value)
         except Exception as e:  # noqa: BLE001
             self._toast(f"Couldn't apply that change: {e}")
             return
-        self.dirty = True
-        self.save_button.set_sensitive(True)
-        self._update_window_title()
+        # A fresh edit invalidates any redo tail left over from a previous
+        # undo — same rule every undo stack follows.
+        del self._history[self._history_pos:]
+        self._history.append((field, old_value, new_value, field.label))
+        self._history_pos += 1
+        self._recompute_history_state()
         self._refresh_category_data()
+
+    def _rerender_current_view(self):
+        """Redraws whatever's currently on screen so it reflects the tree's
+        actual state — needed after undo/redo, since those change a field's
+        value without going through the row widget the user is looking at.
+        """
+        query = self.search_entry.get_text().strip()
+        if query:
+            self._show_search_results(query)
+        elif self._current_category_name:
+            self._show_category(self._current_category_name)
+
+    def _on_undo(self, *_a):
+        if self._history_pos == 0:
+            return
+        self._history_pos -= 1
+        field, old_value, _new_value, label = self._history[self._history_pos]
+        field.set(old_value)
+        self._recompute_history_state()
+        self._refresh_category_data()
+        self._rerender_current_view()
+        self._toast(f"Undid change to {label}")
+
+    def _on_redo(self, *_a):
+        if self._history_pos == len(self._history):
+            return
+        field, _old_value, new_value, label = self._history[self._history_pos]
+        field.set(new_value)
+        self._history_pos += 1
+        self._recompute_history_state()
+        self._refresh_category_data()
+        self._rerender_current_view()
+        self._toast(f"Redid change to {label}")
 
     def _on_save_clicked(self, _button):
         if not self.dirty:
@@ -625,9 +720,9 @@ class HyprformWindow(Adw.ApplicationWindow):
         except Exception as e:  # noqa: BLE001
             self._toast(f"Save failed: {e}")
             return
-        self.dirty = False
-        self.save_button.set_sensitive(False)
-        self._update_window_title()
+        self._clean_pos = self._history_pos
+        self._has_uncommitted_add = False
+        self._recompute_history_state()
         if not saved:
             self._toast("Nothing to save")
             return

@@ -107,12 +107,28 @@ still keeps the existing timestamped backup
 - Categories that start out empty (a fresh config with no window rules yet,
   say) show a plain-English hint and the add-new form instead of a blank
   page — there's always something to click.
+- Hyprform remembers your window size (and whether it was maximized)
+  between launches, like any other desktop app.
+
+### Undo and redo
+
+Every field edit (a toggled switch, a typed value, a moved slider, a picked
+color) can be undone with `Ctrl+Z` and redone with `Ctrl+Shift+Z` — or with
+the two arrow buttons next to Save. Undoing takes you right back to the
+value the field had before, and making a new edit after an undo throws away
+the old "redo" history, the same way any text editor's undo stack works.
+Undo tracks *changes to existing fields* — adding a brand-new keybind,
+window rule, etc. isn't undoable yet (there's no delete feature to pair it
+with), so Hyprform is upfront about that rather than pretending an add can
+be silently reversed.
 
 ### Keyboard shortcuts
 
 | Shortcut | Action |
 | --- | --- |
 | `Ctrl+S` | Save (opens the diff review) |
+| `Ctrl+Z` | Undo the last field edit |
+| `Ctrl+Shift+Z` | Redo |
 | `Ctrl+F` | Jump to the sidebar search box |
 | `Escape` | Clear whichever search box you're in |
 | `Ctrl+Q` | Quit |
@@ -140,12 +156,18 @@ hyprform
 ```
 
 To make it show up in your app launcher (wofi/rofi/fuzzel, GNOME/KDE menus,
-anything that reads the freedesktop `.desktop` spec):
+anything that reads the freedesktop `.desktop` spec) with its own icon
+instead of a generic gear:
 
 ```
-mkdir -p ~/.local/share/applications
+mkdir -p ~/.local/share/applications ~/.local/share/icons/hicolor/scalable/apps
 cp data/dev.rustyisacat.Hyprform.desktop ~/.local/share/applications/
+cp data/icons/hicolor/scalable/apps/dev.rustyisacat.Hyprform.svg ~/.local/share/icons/hicolor/scalable/apps/
 ```
+
+(Hyprform also finds this icon on its own for the About window and window
+decorations — this step is only needed for icon *theme* integration, like
+your launcher's app grid.)
 
 Or point it at a specific config directory (useful for testing against a
 copy before trusting it with your real one):
@@ -168,7 +190,7 @@ have all been tested against a real hybrid hyprlang+Lua Caelestia config
 (69 keybinds, 13 autostart entries, 14 env vars, 7 window rules all
 discovered and correctly classified editable/read-only) as well as a
 synthetic plain hyprlang `.conf`. Run `pytest` for the automated test suite
-(45 tests).
+(49 tests).
 
 ## Source
 
