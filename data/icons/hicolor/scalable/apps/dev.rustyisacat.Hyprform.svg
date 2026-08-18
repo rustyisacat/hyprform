@@ -8,17 +8,16 @@
       <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
       <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
     </radialGradient>
-    <clipPath id="round">
-      <rect x="4" y="4" width="120" height="120" rx="28" ry="28"/>
-    </clipPath>
     <filter id="knob-shadow" x="-60%" y="-60%" width="220%" height="220%">
       <feDropShadow dx="0" dy="2" stdDeviation="2.2" flood-color="#1e1b4b" flood-opacity="0.4"/>
     </filter>
   </defs>
-  <g clip-path="url(#round)">
-    <rect x="4" y="4" width="120" height="120" fill="url(#bg)"/>
-    <rect x="4" y="4" width="120" height="120" fill="url(#sheen)"/>
-  </g>
+  <!-- rx/ry directly on the fill shapes, not a clipPath — some icon
+       renderers (confirmed: whatever composites the launcher's app grid
+       here) don't apply clip-path reliably and fall back to the full
+       square, silently losing the rounded corners. -->
+  <rect x="4" y="4" width="120" height="120" rx="28" ry="28" fill="url(#bg)"/>
+  <rect x="4" y="4" width="120" height="120" rx="28" ry="28" fill="url(#sheen)"/>
   <!-- a single bold toggle switch, "on" — reads clearly even at 16px -->
   <rect x="26" y="50" width="76" height="28" rx="14" fill="#ffffff" fill-opacity="0.26"/>
   <circle cx="86" cy="64" r="17" fill="#ffffff" filter="url(#knob-shadow)"/>
