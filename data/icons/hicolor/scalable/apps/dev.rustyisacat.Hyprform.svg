@@ -4,21 +4,22 @@
       <stop offset="0" stop-color="#8b5cf6"/>
       <stop offset="1" stop-color="#3b82f6"/>
     </linearGradient>
+    <radialGradient id="sheen" cx="0.3" cy="0.15" r="0.85">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
     <clipPath id="round">
       <rect x="4" y="4" width="120" height="120" rx="28" ry="28"/>
     </clipPath>
+    <filter id="knob-shadow" x="-60%" y="-60%" width="220%" height="220%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.2" flood-color="#1e1b4b" flood-opacity="0.4"/>
+    </filter>
   </defs>
   <g clip-path="url(#round)">
     <rect x="4" y="4" width="120" height="120" fill="url(#bg)"/>
+    <rect x="4" y="4" width="120" height="120" fill="url(#sheen)"/>
   </g>
-  <g stroke="#ffffff" stroke-width="7" stroke-linecap="round" opacity="0.95">
-    <line x1="30" y1="42" x2="98" y2="42"/>
-    <line x1="30" y1="64" x2="98" y2="64"/>
-    <line x1="30" y1="86" x2="98" y2="86"/>
-  </g>
-  <g fill="#ffffff">
-    <circle cx="52" cy="42" r="8"/>
-    <circle cx="76" cy="64" r="8"/>
-    <circle cx="60" cy="86" r="8"/>
-  </g>
+  <!-- a single bold toggle switch, "on" — reads clearly even at 16px -->
+  <rect x="26" y="50" width="76" height="28" rx="14" fill="#ffffff" fill-opacity="0.26"/>
+  <circle cx="86" cy="64" r="17" fill="#ffffff" filter="url(#knob-shadow)"/>
 </svg>
