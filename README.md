@@ -3,7 +3,7 @@
 ![Platform](https://img.shields.io/badge/platform-Hyprland-58E1FF?logo=linux&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![GTK4](https://img.shields.io/badge/UI-GTK4%20%2B%20libadwaita-4A86CF?logo=gtk&logoColor=white)
-![Version](https://img.shields.io/badge/version-0.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
 
 A GUI for editing Hyprland's config. No nano, no learning hyprlang or Lua syntax.

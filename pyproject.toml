@@ -1,6 +1,6 @@
 [project]
 name = "hyprform"
-version = "0.1.0"
+version = "1.0.0"
 description = "A GUI for editing Hyprland's config — no nano, no lingo"
 readme = "README.md"
 license = { text = "AGPL-3.0-or-later" }
