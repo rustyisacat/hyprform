@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hyprform — a visual config editor for Hyprland</title>
+<meta name="description" content="Hyprform is a GTK4/libadwaita app that lets you edit your Hyprland config visually — classic hyprlang and native Lua both — without hand-editing text files.">
+<style>
+  :root {
+    --accent: #3584e4;
+    --accent-hover: #1c71d8;
+    --accent-soft: rgba(53,132,228,0.1);
+    --bg: #fafafb;
+    --bg-alt: #f3f3f4;
+    --card-bg: #ffffff;
+    --card-border: rgba(0,0,0,0.08);
+    --card-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    --text: #1e1e1e;
+    --text-secondary: #5e5e5e;
+    --text-tertiary: #8a8a8d;
+    --window-bg: #ebebed;
+    --window-header: #f7f7f8;
+    --sidebar-bg: #f2f2f4;
+    --radius-lg: 16px;
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --border-soft: rgba(0,0,0,0.09);
+    --switch-off: #d7d7da;
+    --code-bg: #f3f3f5;
+    --code-text: #3a3a3d;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1e1e20;
+      --bg-alt: #242426;
+      --card-bg: #2b2b2e;
+      --card-border: rgba(255,255,255,0.08);
+      --card-shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.24);
+      --text: #f2f2f3;
+      --text-secondary: #b8b8bb;
+      --text-tertiary: #8a8a8d;
+      --window-bg: #262628;
+      --window-header: #2d2d30;
+      --sidebar-bg: #232325;
+      --border-soft: rgba(255,255,255,0.09);
+      --switch-off: #4a4a4d;
+      --code-bg: #232325;
+      --code-text: #d6d6d8;
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Cantarell", "Ubuntu", "Noto Sans", Roboto, Oxygen, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  code, .mono {
+    font-family: ui-monospace, "SF Mono", "Cascadia Code", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  code {
+    background: var(--code-bg);
+    color: var(--code-text);
+    padding: 0.15em 0.4em;
+    border-radius: 6px;
+    font-size: 0.88em;
+  }
+
+  /* ---------- Nav ---------- */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--card-border);
+  }
+  .nav-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 17px;
+    color: var(--text);
+  }
+  .brand-mark {
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    background: linear-gradient(155deg, var(--accent), #7aa7e9);
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-weight: 800;
+    font-size: 15px;
+    box-shadow: 0 2px 6px rgba(53,132,228,0.35);
+  }
+  .nav-links { display: flex; gap: 22px; align-items: center; font-size: 14.5px; }
+  .nav-links a { color: var(--text-secondary); font-weight: 500; }
+  .nav-links a:hover { color: var(--text); text-decoration: none; }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 14px;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent-hover); text-decoration: none; }
+  .btn-ghost {
+    background: var(--card-bg);
+    color: var(--text);
+    border-color: var(--card-border);
+  }
+  .btn-ghost:hover { background: var(--bg-alt); text-decoration: none; }
+
+  /* ---------- Hero ---------- */
+  header.hero {
+    padding: 76px 0 48px;
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 56px;
+    align-items: center;
+  }
+  @media (max-width: 880px) {
+    .hero-grid { grid-template-columns: 1fr; }
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    margin-bottom: 18px;
+  }
+  h1 {
+    font-size: 46px;
+    line-height: 1.12;
+    margin: 0 0 18px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  h1 .accent { color: var(--accent); }
+  .tagline {
+    font-size: 19px;
+    color: var(--text-secondary);
+    margin: 0 0 30px;
+    max-width: 46ch;
+  }
+  .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  .hero-note { font-size: 13.5px; color: var(--text-tertiary); }
+
+  /* ---------- App mockup ---------- */
+  .app-window {
+    background: var(--window-bg);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 50px -12px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.08);
+    border: 1px solid var(--card-border);
+    overflow: hidden;
+    user-select: none;
+  }
+  .titlebar {
+    background: var(--window-header);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .dots { display: flex; gap: 6px; }
+  .dots span { width: 11px; height: 11px; border-radius: 50%; }
+  .dots span:nth-child(1) { background: #ff5f57; }
+  .dots span:nth-child(2) { background: #febc2e; }
+  .dots span:nth-child(3) { background: #28c840; }
+  .titlebar-title {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-right: 44px;
+  }
+  .app-body {
+    display: grid;
+    grid-template-columns: 168px 1fr;
+    min-height: 380px;
+  }
+  .app-sidebar {
+    background: var(--sidebar-bg);
+    padding: 14px 10px;
+    border-right: 1px solid var(--border-soft);
+  }
+  .sidebar-search {
+    background: var(--card-bg);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm);
+    padding: 7px 10px;
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin-bottom: 12px;
+  }
+  .sidebar-item {
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sidebar-item .ic { font-size: 13px; opacity: 0.75; }
+  .sidebar-item.active {
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  .app-main {
+    padding: 20px 22px;
+    background: var(--bg);
+  }
+  .main-heading {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .main-sub {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-bottom: 16px;
+  }
+  .form-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    margin-bottom: 14px;
+  }
+  .form-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border-soft);
+    gap: 12px;
+  }
+  .form-row:last-child { border-bottom: none; }
+  .row-label { display: flex; flex-direction: column; gap: 1px; }
+  .row-label .t { font-weight: 500; color: var(--text); }
+  .row-label .d { font-size: 11px; color: var(--text-tertiary); }
+  .row-control { flex-shrink: 0; }
+  .fake-spin {
+    display: inline-flex;
+    align-items: center;
+    background: var(--bg-alt);
+    border: 1px solid var(--border-soft);
+    border-radius: 7px;
+    overflow: hidden;
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .fake-spin .val { padding: 5px 10px; min-width: 26px; text-align: center; }
+  .fake-spin .stp { padding: 5px 8px; color: var(--text-tertiary); cursor: default; }
+  .fake-spin .stp:hover { background: var(--card-border); }
+  .fake-switch {
+    width: 38px; height: 22px;
+    border-radius: 999px;
+    background: var(--switch-off);
+    position: relative;
+    flex-shrink: 0;
+  }
+  .fake-switch.on { background: var(--accent); }
+  .fake-switch::after {
+    content: "";
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+    transition: left .15s;
+  }
+  .fake-switch.on::after { left: 18px; }
+  .fake-swatch {
+    width: 22px; height: 22px;
+    border-radius: 6px;
+    border: 2px solid var(--card-bg);
+    box-shadow: 0 0 0 1px var(--border-soft);
+    background: linear-gradient(135deg, #3584e4, #1c71d8);
+  }
+  .fake-dropdown {
+    background: var(--bg-alt);
+    border: 1px solid var(--border-soft);
+    border-radius: 7px;
+    padding: 5px 10px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-secondary);
+  }
+
+  /* ---------- Section shells ---------- */
+  section { padding: 64px 0; }
+  .section-head { max-width: 640px; margin: 0 auto 40px; text-align: center; }
+  .section-head h2 {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+  }
+  .section-head p {
+    color: var(--text-secondary);
+    font-size: 16px;
+    margin: 0;
+  }
+  .divider {
+    height: 1px;
+    background: var(--card-border);
+    border: none;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+
+  /* ---------- Problem ---------- */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 720px) { .problem-grid { grid-template-columns: 1fr; } }
+  .problem-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+    padding: 26px 26px 24px;
+  }
+  .problem-card h3 {
+    margin: 0 0 10px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+  .problem-card p { margin: 0; color: var(--text-secondary); font-size: 14.5px; }
+  .badge-bad { color: #e01b24; }
+  .badge-good { color: #2ec27e; }
+  pre.snippet {
+    background: var(--code-bg);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 12.5px;
+    overflow-x: auto;
+    color: var(--code-text);
+    margin: 12px 0 0;
+    line-height: 1.6;
+  }
+
+  /* ---------- Features ---------- */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  @media (max-width: 880px) { .feature-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 580px) { .feature-grid { grid-template-columns: 1fr; } }
+  .feature-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--card-shadow);
+    padding: 22px;
+  }
+  .feature-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    margin-bottom: 14px;
+  }
+  .feature-card h3 { margin: 0 0 8px; font-size: 15.5px; }
+  .feature-card p { margin: 0; font-size: 13.8px; color: var(--text-secondary); }
+
+  /* ---------- Under the hood ---------- */
+  .hood-wrap {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+    padding: 40px;
+  }
+  @media (max-width: 640px) { .hood-wrap { padding: 26px; } }
+  .hood-steps {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+    margin-top: 28px;
+  }
+  @media (max-width: 780px) { .hood-steps { grid-template-columns: 1fr; } }
+  .hood-step {
+    padding: 18px;
+    border-radius: var(--radius-md);
+    background: var(--bg-alt);
+    border: 1px solid var(--border-soft);
+  }
+  .hood-step .num {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 12.5px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .hood-step h4 { margin: 0 0 6px; font-size: 14.5px; }
+  .hood-step p { margin: 0; font-size: 13.3px; color: var(--text-secondary); }
+
+  .stat-row {
+    display: flex;
+    gap: 34px;
+    margin-top: 30px;
+    flex-wrap: wrap;
+  }
+  .stat { }
+  .stat .num { font-size: 26px; font-weight: 800; color: var(--accent); }
+  .stat .lbl { font-size: 12.5px; color: var(--text-tertiary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+
+  /* ---------- Install ---------- */
+  .install-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--card-shadow);
+    padding: 34px 38px;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  @media (max-width: 640px) { .install-card { padding: 24px; } }
+  .install-card h3 { margin: 0 0 4px; font-size: 17px; }
+  .install-card .sub { color: var(--text-secondary); font-size: 14px; margin-bottom: 18px; }
+  pre.code-block {
+    background: var(--code-bg);
+    border-radius: 10px;
+    padding: 18px 20px;
+    font-size: 13.3px;
+    overflow-x: auto;
+    color: var(--code-text);
+    line-height: 1.7;
+    margin: 0;
+  }
+  pre.code-block .c { color: var(--text-tertiary); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 1px solid var(--card-border);
+    padding: 36px 0 48px;
+  }
+  .footer-inner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 13.5px;
+    color: var(--text-tertiary);
+  }
+  .footer-links { display: flex; gap: 18px; }
+  .footer-links a { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <div class="brand">
+      <div class="brand-mark">Hf</div>
+      Hyprform
+    </div>
+    <div class="nav-links">
+      <a href="#problem">Why</a>
+      <a href="#features">Features</a>
+      <a href="#under-the-hood">Under the hood</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/rustyisacat/hyprform" class="btn btn-ghost">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">● For Hyprland</span>
+      <h1>Configure Hyprland <span class="accent">without touching a config file.</span></h1>
+      <p class="tagline">Hyprform is a native GTK4/libadwaita app for editing your Hyprland config visually — no nano, no learning hyprlang, no learning Lua. Just a form.</p>
+      <div class="hero-ctas">
+        <a href="https://github.com/rustyisacat/hyprform" class="btn btn-primary">View on GitHub</a>
+        <a href="#install" class="btn btn-ghost">Install instructions</a>
+      </div>
+      <div class="hero-note">Free and open source · AGPL-3.0-or-later · Python + GTK4</div>
+    </div>
+
+    <div class="app-window" aria-hidden="true">
+      <div class="titlebar">
+        <div class="dots"><span></span><span></span><span></span></div>
+        <div class="titlebar-title">Hyprform</div>
+      </div>
+      <div class="app-body">
+        <div class="app-sidebar">
+          <div class="sidebar-search">🔍 Search settings…</div>
+          <div class="sidebar-item"><span class="ic">◱</span> Appearance</div>
+          <div class="sidebar-item active"><span class="ic">▦</span> Gaps &amp; Layout</div>
+          <div class="sidebar-item"><span class="ic">◐</span> Blur &amp; Shadow</div>
+          <div class="sidebar-item"><span class="ic">⌨</span> Input</div>
+          <div class="sidebar-item"><span class="ic">⎘</span> Keybinds</div>
+          <div class="sidebar-item"><span class="ic">🖵</span> Monitors</div>
+          <div class="sidebar-item"><span class="ic">▣</span> Window Rules</div>
+          <div class="sidebar-item"><span class="ic">⚙</span> Behavior</div>
+        </div>
+        <div class="app-main">
+          <div class="main-heading">Gaps &amp; Layout</div>
+          <div class="main-sub">Spacing between windows and screen edges</div>
+          <div class="form-card">
+            <div class="form-row">
+              <div class="row-label"><span class="t">Gaps In</span><span class="d">Space between windows</span></div>
+              <div class="row-control fake-spin"><span class="stp">–</span><span class="val">5</span><span class="stp">+</span></div>
+            </div>
+            <div class="form-row">
+              <div class="row-label"><span class="t">Gaps Out</span><span class="d">Space to screen edge</span></div>
+              <div class="row-control fake-spin"><span class="stp">–</span><span class="val">12</span><span class="stp">+</span></div>
+            </div>
+            <div class="form-row">
+              <div class="row-label"><span class="t">Rounding</span><span class="d">Corner radius, px</span></div>
+              <div class="row-control fake-spin"><span class="stp">–</span><span class="val">10</span><span class="stp">+</span></div>
+            </div>
+          </div>
+          <div class="form-card">
+            <div class="form-row">
+              <div class="row-label"><span class="t">Border Color</span><span class="d">Active window border</span></div>
+              <div class="row-control fake-swatch"></div>
+            </div>
+            <div class="form-row">
+              <div class="row-label"><span class="t">Blur</span><span class="d">Background blur on windows</span></div>
+              <div class="row-control fake-switch on"></div>
+            </div>
+            <div class="form-row">
+              <div class="row-label"><span class="t">Layout</span><span class="d">Tiling algorithm</span></div>
+              <div class="row-control fake-dropdown">dwindle ▾</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<hr class="divider">
+
+<section id="problem">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Raw config editing is hostile</h2>
+      <p>Hyprland is powerful because its config is just text. That's also exactly why it's rough for anyone who isn't already fluent in it.</p>
+    </div>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <h3><span class="badge-bad">✕</span> Without Hyprform</h3>
+        <p>Open <code>hyprland.conf</code> in a terminal editor, guess at what <code>decoration:blur:passes</code> actually does, hope you didn't break the block above it, save, reload, and repeat until it looks right — or worse, silently doesn't apply at all.</p>
+        <pre class="snippet">decoration {
+  rounding = 10
+  blur {
+    enabled = true
+    size = 8
+    passes = 3    # what does this do again?
+  }
+}</pre>
+      </div>
+      <div class="problem-card">
+        <h3><span class="badge-good">✓</span> With Hyprform</h3>
+        <p>Open the app, click "Blur &amp; Shadow," see labeled sliders and toggles with plain-English descriptions, change what you mean to change. Hyprform writes back only that one value — everything else in your file stays exactly as you left it.</p>
+        <pre class="snippet">Blur Passes           [ 3 ]
+"How many times the blur
+ is applied — more passes
+ = smoother, slower to render"</pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>What it does</h2>
+      <p>Not a raw key-value dump — a real, curated settings UI for the parts of your config people actually touch.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📝</div>
+        <h3>Reads both config formats</h3>
+        <p>Works with the classic hyprlang <code>.conf</code> syntax and Hyprland's newer native Lua config API — whichever one your setup actually uses.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎯</div>
+        <h3>Surgical edits</h3>
+        <p>Only the exact value you change gets rewritten. Every untouched line in your config comes back byte-for-byte identical — comments, spacing, formatting, all of it.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧩</div>
+        <h3>Follows your file layout</h3>
+        <p>If your config is split across files with <code>source =</code> or <code>require(...)</code>, Hyprform follows the chain and treats the whole thing as one editable graph.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🗂️</div>
+        <h3>A real form, not a key list</h3>
+        <p>Gaps, borders, rounding, blur, shadows, animations, layout, DPMS/VRR toggles, and more — grouped into sections with plain-English labels and descriptions, not raw hyprlang key names.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Honest about what it can't edit</h3>
+        <p>Lua values that come from loops, function calls, or variables aren't guessable — Hyprform shows their real source text instead of overwriting or misrepresenting them.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <h3>Search everything</h3>
+        <p>One search bar filters every setting across every category by name and description — plus a dedicated keybind search for configs with 50+ bindings.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⌨️</div>
+        <h3>Add keybinds, rules, monitors</h3>
+        <p>Build a new window rule, keybind, autostart entry, or monitor line from a form — Hyprform writes the correct hyprlang or Lua syntax for you.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3>Feels native</h3>
+        <p>Built with GTK4 and libadwaita, so it looks and behaves like a real part of your desktop — not a web app in a window.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧪</div>
+        <h3>Actually tested</h3>
+        <p>A real test suite (13/13 passing) covers the parser, writer, and Lua AST classification — not just the UI.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section id="under-the-hood">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Under the hood</h2>
+      <p>For anyone curious how a GUI can safely edit a hand-written config file without wrecking it.</p>
+    </div>
+    <div class="hood-wrap">
+      <p style="margin:0; color:var(--text-secondary); font-size:15px;">
+        Hyprform doesn't treat your config as a bag of key-value pairs to regenerate. It parses it, edits it in place,
+        and writes back exactly what changed — for both config formats Hyprland supports.
+      </p>
+      <div class="hood-steps">
+        <div class="hood-step">
+          <div class="num">1</div>
+          <h4>Hand-written hyprlang parser</h4>
+          <p>A recursive-descent parser and writer built specifically for hyprlang's <code>key = value</code> and <code>block { }</code> grammar. Every line that isn't touched round-trips byte-identical — comments, whitespace, ordering, all preserved.</p>
+        </div>
+        <div class="hood-step">
+          <div class="num">2</div>
+          <h4>A real Lua AST for Lua configs</h4>
+          <p>Newer Hyprland installs use a native Lua config (<code>hl.config()</code>, <code>hl.bind()</code>, <code>hl.env()</code>, <code>hl.window_rule()</code>, <code>hl.monitor()</code>...). Hyprform parses this with an actual Lua abstract syntax tree, not regex.</p>
+        </div>
+        <div class="hood-step">
+          <div class="num">3</div>
+          <h4>Editable vs. opaque, classified honestly</h4>
+          <p>Each Lua value is classified as editable — a literal or array of literals — or opaque: a loop, a function call, a variable reference. Opaque values are always shown as their real source text, never guessed at or silently clobbered.</p>
+        </div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><div class="num">13/13</div><div class="lbl">tests passing</div></div>
+        <div class="stat"><div class="num">2</div><div class="lbl">config formats supported</div></div>
+        <div class="stat"><div class="num">1</div><div class="lbl">line changed per edit</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<section id="install">
+  <div class="wrap">
+    <div class="section-head">
+      <h2>Install</h2>
+      <p>Hyprform is Python, managed with <code>uv</code>. Source and build instructions live in the repo.</p>
+    </div>
+    <div class="install-card">
+      <h3>From source</h3>
+      <div class="sub">App ID: <code>dev.rustyisacat.Hyprform</code></div>
+      <pre class="code-block"><span class="c"># clone the repo</span>
+git clone https://github.com/rustyisacat/hyprform.git
+cd hyprform
+
+<span class="c"># install dependencies with uv</span>
+uv sync
+
+<span class="c"># run it</span>
+uv run hyprform</pre>
+      <p style="margin:20px 0 0; font-size:13.8px; color:var(--text-secondary);">
+        Full build, packaging, and dependency details are kept up to date in the
+        <a href="https://github.com/rustyisacat/hyprform">README on GitHub</a> — that's the source of truth, not this page.
+      </p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap footer-inner">
+    <div>Hyprform · Licensed under <a href="https://www.gnu.org/licenses/agpl-3.0.html">AGPL-3.0-or-later</a></div>
+    <div class="footer-links">
+      <a href="https://github.com/rustyisacat/hyprform">GitHub</a>
+      <a href="https://github.com/rustyisacat/hyprform/issues">Issues</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
