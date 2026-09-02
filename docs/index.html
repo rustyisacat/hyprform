@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hyprform — a visual config editor for Hyprland</title>
-<meta name="description" content="Hyprform is a GTK4/libadwaita app that lets you edit your Hyprland config visually — classic hyprlang and native Lua both — without hand-editing text files.">
+<title>Hyprform, a visual config editor for Hyprland</title>
+<meta name="description" content="Hyprform is a GTK4/libadwaita app that lets you edit your Hyprland config visually, both classic hyprlang and native Lua, without hand-editing text files.">
 <style>
   :root {
     --accent: #3584e4;
@@ -533,7 +533,7 @@
     <div>
       <span class="eyebrow">● For Hyprland</span>
       <h1>Configure Hyprland <span class="accent">without touching a config file.</span></h1>
-      <p class="tagline">Hyprform is a native GTK4/libadwaita app for editing your Hyprland config visually — no nano, no learning hyprlang, no learning Lua. Just a form.</p>
+      <p class="tagline">Hyprform is a native GTK4/libadwaita app for editing your Hyprland config visually. No nano, no learning hyprlang, no learning Lua. Just a form.</p>
       <div class="hero-ctas">
         <a href="https://github.com/rustyisacat/hyprform" class="btn btn-primary">View on GitHub</a>
         <a href="#install" class="btn btn-ghost">Install instructions</a>
@@ -606,7 +606,7 @@
     <div class="problem-grid">
       <div class="problem-card">
         <h3><span class="badge-bad">✕</span> Without Hyprform</h3>
-        <p>Open <code>hyprland.conf</code> in a terminal editor, guess at what <code>decoration:blur:passes</code> actually does, hope you didn't break the block above it, save, reload, and repeat until it looks right — or worse, silently doesn't apply at all.</p>
+        <p>Open <code>hyprland.conf</code> in a terminal editor, guess at what <code>decoration:blur:passes</code> actually does, hope you didn't break the block above it, save, reload, and repeat until it looks right. Or worse, it silently doesn't apply at all.</p>
         <pre class="snippet">decoration {
   rounding = 10
   blur {
@@ -618,10 +618,10 @@
       </div>
       <div class="problem-card">
         <h3><span class="badge-good">✓</span> With Hyprform</h3>
-        <p>Open the app, click "Blur &amp; Shadow," see labeled sliders and toggles with plain-English descriptions, change what you mean to change. Hyprform writes back only that one value — everything else in your file stays exactly as you left it.</p>
+        <p>Open the app, click "Blur &amp; Shadow," see labeled sliders and toggles with plain-English descriptions, change what you mean to change. Hyprform writes back only that one value, and everything else in your file stays exactly as you left it.</p>
         <pre class="snippet">Blur Passes           [ 3 ]
 "How many times the blur
- is applied — more passes
+ is applied: more passes
  = smoother, slower to render"</pre>
       </div>
     </div>
@@ -634,18 +634,18 @@
   <div class="wrap">
     <div class="section-head">
       <h2>What it does</h2>
-      <p>Not a raw key-value dump — a real, curated settings UI for the parts of your config people actually touch.</p>
+      <p>Not a raw key-value dump, but a real, curated settings UI for the parts of your config people actually touch.</p>
     </div>
     <div class="feature-grid">
       <div class="feature-card">
         <div class="feature-icon">📝</div>
         <h3>Reads both config formats</h3>
-        <p>Works with the classic hyprlang <code>.conf</code> syntax and Hyprland's newer native Lua config API — whichever one your setup actually uses.</p>
+        <p>Works with the classic hyprlang <code>.conf</code> syntax and Hyprland's newer native Lua config API, whichever one your setup actually uses.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🎯</div>
         <h3>Surgical edits</h3>
-        <p>Only the exact value you change gets rewritten. Every untouched line in your config comes back byte-for-byte identical — comments, spacing, formatting, all of it.</p>
+        <p>Only the exact value you change gets rewritten. Every untouched line in your config comes back byte-for-byte identical: comments, spacing, formatting, all of it.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🧩</div>
@@ -655,32 +655,32 @@
       <div class="feature-card">
         <div class="feature-icon">🗂️</div>
         <h3>A real form, not a key list</h3>
-        <p>Gaps, borders, rounding, blur, shadows, animations, layout, DPMS/VRR toggles, and more — grouped into sections with plain-English labels and descriptions, not raw hyprlang key names.</p>
+        <p>Gaps, borders, rounding, blur, shadows, animations, layout, DPMS/VRR toggles, and more, all grouped into sections with plain-English labels and descriptions, not raw hyprlang key names.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🔒</div>
         <h3>Honest about what it can't edit</h3>
-        <p>Lua values that come from loops, function calls, or variables aren't guessable — Hyprform shows their real source text instead of overwriting or misrepresenting them.</p>
+        <p>Lua values that come from loops, function calls, or variables aren't guessable, so Hyprform shows their real source text instead of overwriting or misrepresenting them.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🔍</div>
         <h3>Search everything</h3>
-        <p>One search bar filters every setting across every category by name and description — plus a dedicated keybind search for configs with 50+ bindings.</p>
+        <p>One search bar filters every setting across every category by name and description. There's also a dedicated keybind search for configs with 50+ bindings.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">⌨️</div>
         <h3>Add keybinds, rules, monitors</h3>
-        <p>Build a new window rule, keybind, autostart entry, or monitor line from a form — Hyprform writes the correct hyprlang or Lua syntax for you.</p>
+        <p>Build a new window rule, keybind, autostart entry, or monitor line from a form, and Hyprform writes the correct hyprlang or Lua syntax for you.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🎨</div>
         <h3>Feels native</h3>
-        <p>Built with GTK4 and libadwaita, so it looks and behaves like a real part of your desktop — not a web app in a window.</p>
+        <p>Built with GTK4 and libadwaita, so it looks and behaves like a real part of your desktop, not a web app in a window.</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon">🧪</div>
         <h3>Actually tested</h3>
-        <p>A real test suite (13/13 passing) covers the parser, writer, and Lua AST classification — not just the UI.</p>
+        <p>A real test suite (13/13 passing) covers the parser, writer, and Lua AST classification, not just the UI.</p>
       </div>
     </div>
   </div>
@@ -697,13 +697,13 @@
     <div class="hood-wrap">
       <p style="margin:0; color:var(--text-secondary); font-size:15px;">
         Hyprform doesn't treat your config as a bag of key-value pairs to regenerate. It parses it, edits it in place,
-        and writes back exactly what changed — for both config formats Hyprland supports.
+        and writes back exactly what changed, for both config formats Hyprland supports.
       </p>
       <div class="hood-steps">
         <div class="hood-step">
           <div class="num">1</div>
           <h4>Hand-written hyprlang parser</h4>
-          <p>A recursive-descent parser and writer built specifically for hyprlang's <code>key = value</code> and <code>block { }</code> grammar. Every line that isn't touched round-trips byte-identical — comments, whitespace, ordering, all preserved.</p>
+          <p>A recursive-descent parser and writer built specifically for hyprlang's <code>key = value</code> and <code>block { }</code> grammar. Every line that isn't touched round-trips byte-identical, with comments, whitespace, and ordering all preserved.</p>
         </div>
         <div class="hood-step">
           <div class="num">2</div>
@@ -713,7 +713,7 @@
         <div class="hood-step">
           <div class="num">3</div>
           <h4>Editable vs. opaque, classified honestly</h4>
-          <p>Each Lua value is classified as editable — a literal or array of literals — or opaque: a loop, a function call, a variable reference. Opaque values are always shown as their real source text, never guessed at or silently clobbered.</p>
+          <p>Each Lua value is classified as either editable (a literal or array of literals) or opaque (a loop, a function call, a variable reference). Opaque values are always shown as their real source text, never guessed at or silently clobbered.</p>
         </div>
       </div>
       <div class="stat-row">
@@ -747,7 +747,7 @@ uv sync
 uv run hyprform</pre>
       <p style="margin:20px 0 0; font-size:13.8px; color:var(--text-secondary);">
         Full build, packaging, and dependency details are kept up to date in the
-        <a href="https://github.com/rustyisacat/hyprform">README on GitHub</a> — that's the source of truth, not this page.
+        <a href="https://github.com/rustyisacat/hyprform">README on GitHub</a>. That's the source of truth, not this page.
       </p>
     </div>
   </div>
