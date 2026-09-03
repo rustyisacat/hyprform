@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fafafb"/>
+      <stop offset="1" stop-color="#eef3fb"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3584e4"/>
+      <stop offset="1" stop-color="#7aa7e9"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- app icon, scaled up version of favicon -->
+  <g transform="translate(90,165) scale(4.6)">
+    <rect x="2" y="2" width="60" height="60" rx="18" fill="url(#mark)"/>
+    <rect x="14" y="19" width="28" height="12" rx="6" fill="#ffffff"/>
+    <circle cx="36" cy="25" r="7" fill="#1c71d8"/>
+    <rect x="14" y="37" width="20" height="8" rx="4" fill="#ffffff" fill-opacity="0.55"/>
+  </g>
+
+  <text x="560" y="270" font-family="-apple-system, 'Segoe UI', 'Cantarell', 'Noto Sans', Roboto, Helvetica, Arial, sans-serif" font-size="72" font-weight="800" fill="#1e1e1e" letter-spacing="-1">Hyprform</text>
+
+  <text x="560" y="325" font-family="-apple-system, 'Segoe UI', 'Cantarell', 'Noto Sans', Roboto, Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="#3584e4">Configure Hyprland without touching</text>
+  <text x="560" y="357" font-family="-apple-system, 'Segoe UI', 'Cantarell', 'Noto Sans', Roboto, Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="#3584e4">a config file.</text>
+
+  <text x="560" y="410" font-family="-apple-system, 'Segoe UI', 'Cantarell', 'Noto Sans', Roboto, Helvetica, Arial, sans-serif" font-size="21" fill="#5e5e5e">A native GTK4/libadwaita app for editing your Hyprland</text>
+  <text x="560" y="439" font-family="-apple-system, 'Segoe UI', 'Cantarell', 'Noto Sans', Roboto, Helvetica, Arial, sans-serif" font-size="21" fill="#5e5e5e">config visually. No nano, no learning hyprlang, no Lua.</text>
+
+  <rect x="560" y="474" width="272" height="40" rx="20" fill="rgba(53,132,228,0.1)"/>
+  <text x="696" y="500" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Consolas, monospace" font-size="16" font-weight="700" fill="#3584e4">Free &amp; open source · AGPL-3.0</text>
+</svg>
