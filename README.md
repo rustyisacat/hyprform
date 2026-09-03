@@ -3,8 +3,10 @@
 ![Platform](https://img.shields.io/badge/platform-Hyprland-58E1FF?logo=linux&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![GTK4](https://img.shields.io/badge/UI-GTK4%20%2B%20libadwaita-4A86CF?logo=gtk&logoColor=white)
-![Version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Frustyisacat%2Fhyprform%2Fmaster%2Fpyproject.toml&query=%24.project.version&label=version)
+![Version](https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Frusty-workshop%2Fhyprform%2Fmaster%2Fpyproject.toml&query=%24.project.version&label=version)
 ![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)
+
+🌐 **[Live site](https://hyprform.rusty.is-a.dev/)**
 
 A GUI for editing Hyprland's config. No nano, no learning hyprlang or Lua syntax.
 
@@ -197,7 +199,7 @@ synthetic plain hyprlang `.conf`. Run `pytest` for the automated test suite
 
 ## Source
 
-https://github.com/rustyisacat/hyprform
+https://github.com/rusty-workshop/hyprform
 
 ## License
 
